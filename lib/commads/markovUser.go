@@ -18,7 +18,6 @@ var reTarget = regexp.MustCompile("[\\<>@#&!]")
 
 // MarkovUseCommand create a markov chain from an URL
 func MarkovUserCommand(message *discordgo.MessageCreate, args commandArgs) {
-
 	userID := reTarget.ReplaceAllString(args.Word, "")
 
 	resp, err := http.Get("http://localhost:3000/userMessages/" + message.GuildID + "/" + userID)
@@ -41,7 +40,6 @@ func MarkovUserCommand(message *discordgo.MessageCreate, args commandArgs) {
 
 	textSeed := strings.Join(messages, " ")
 	markov := markov.New()
-
 	Bot.ChannelMessageSend(message.ChannelID, markov.ReadText(textSeed))
 }
 

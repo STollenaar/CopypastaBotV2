@@ -15,6 +15,8 @@ func MarkovInit(parser *parsley.Parser) {
 
 // MarkovCommand create a markov chain from an URL
 func MarkovCommand(message *discordgo.MessageCreate, args commandArgs) {
+	Bot.ChannelTyping(message.ChannelID)
+
 	if _, err := url.ParseRequestURI(args.Word); err == nil {
 		MarkovURLCommand(message, args)
 	} else if strings.Contains(args.Word, "@") {
