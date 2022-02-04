@@ -8,6 +8,11 @@ import (
 // Bot main reference to the bot
 var Bot *discordgo.Session
 
+// optionalCommandArg other basic command arg
+type optionalCommandArg struct {
+	Word string `default:"" description:"The word to for the command."`
+}
+
 // commandArgs basic command args
 type commandArgs struct {
 	Word string `description:"The word to for the command."`

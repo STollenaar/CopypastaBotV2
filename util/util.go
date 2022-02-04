@@ -29,6 +29,11 @@ func IsTerminalWord(word string) bool {
 	return compiled
 }
 
+func DisplayRedditSubreddit(subreddit string) []*reddit.Post {
+	posts, _, _ := redditClient.Subreddit.HotPosts(context.TODO(), subreddit, &reddit.ListOptions{})
+	return posts
+}
+
 func DisplayRedditPost(redditPostID string, singleEmbed bool) (embeds []discordgo.MessageEmbed) {
 	if len(images) == 0 {
 		images = []string{".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".gif"}
