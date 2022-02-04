@@ -1,26 +1,17 @@
 package commands
 
 import (
-	"context"
+	"copypastabot/util"
 	"fmt"
 	"net/url"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/nint8835/parsley"
-	"github.com/vartanbeno/go-reddit/v2/reddit"
 )
-
-var redditClient *reddit.Client
-
-var images []string
-var videos []string
 
 func CopyInit(parser *parsley.Parser) {
 	parser.NewCommand("copy", "Copypasta from the provided reddit url or threadID", CopyCommand)
-	redditClient, _ = reddit.NewReadonlyClient()
-	images = []string{".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".gif"}
-	videos = []string{"youtube", "gfycat", "youtu"}
 }
 
 // CopyCommand basic multi handler of the copypasta command
@@ -36,57 +27,7 @@ func CopyCommand(message *discordgo.MessageCreate, args commandArgs) {
 		}
 		args.Word = path[postID+1]
 	}
-	postCommnents, _, _ := redditClient.Post.Get(context.TODO(), args.Word)
-	body := postCommnents.Post.Body
-
-	if postCommnents.Post.Body == "" {
-		body = postCommnents.Post.URL
-	}
-
-	// Getting around the 4096 word limit
-	contents := breakContent(body)
-
-	for i, content := range contents {
-		embed := discordgo.MessageEmbed{}
-
-		// Making sure if it's not a text content that the embed is set correctly
-		if uri, err := url.ParseRequestURI(content); err == nil {
-			if arrayContainsSub(images, uri.RequestURI()) {
-				embed.Image = &discordgo.MessageEmbedImage{
-					URL: content,
-				}
-			} else if arrayContainsSub(videos, uri.RequestURI()) {
-				embed.Video = &discordgo.MessageEmbedVideo{
-					URL: content,
-				}
-			} else {
-				embed.Description = content
-			}
-		} else {
-			embed.Description = content
-		}
-
-		if i == 0 {
-			embed.Title = postCommnents.Post.Title
-			embed.Author = &discordgo.MessageEmbedAuthor{
-				Name: postCommnents.Post.Author,
-				URL:  ("https://www.reddit.com/u/" + postCommnents.Post.Author),
-			}
-		}
-
-		// Only adding the footer if this is the last entry
-		if i == len(contents)-1 {
-			embed.Fields = []*discordgo.MessageEmbedField{
-				{
-					Name:   "Reddit Thread:",
-					Value:  ("https://www.reddit.com" + postCommnents.Post.Permalink),
-					Inline: true,
-				},
-			}
-			embed.Footer = &discordgo.MessageEmbedFooter{
-				Text: ("PostID: " + postCommnents.Post.ID),
-			}
-		}
+	for _, embed := range util.DisplayRedditPost(args.Word, false) {
 		Bot.ChannelMessageSendComplex(message.ChannelID, &discordgo.MessageSend{
 			Embed: &embed,
 		})
