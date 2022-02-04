@@ -30,6 +30,7 @@ func Init(bot *discordgo.Session, parser *parsley.Parser) {
 	Bot = bot
 	PingInit(parser)
 	MarkovInit(parser)
+	CopyInit(parser)
 }
 
 // parseArguments parses the arguments from the command into an unified struct
