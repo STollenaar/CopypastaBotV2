@@ -30,6 +30,9 @@ func IsTerminalWord(word string) bool {
 }
 
 func DisplayRedditSubreddit(subreddit string) []*reddit.Post {
+	if redditClient == nil {
+		redditClient, _ = reddit.NewReadonlyClient()
+	}
 	posts, _, _ := redditClient.Subreddit.HotPosts(context.TODO(), subreddit, &reddit.ListOptions{})
 	return posts
 }

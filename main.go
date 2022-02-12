@@ -29,7 +29,9 @@ func main() {
 		return
 	}
 
-	bot.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsGuildMessages)
+	bot.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsGuildMessages |
+		discordgo.IntentsGuildMessageReactions |
+		discordgo.IntentsGuildMessageTyping)
 
 	parser := parsley.New("pasta!")
 	parser.RegisterHandler(bot)

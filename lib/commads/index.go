@@ -31,4 +31,5 @@ func Init(bot *discordgo.Session, parser *parsley.Parser) {
 	PingInit(parser)
 	MarkovInit(parser)
 	CopyInit(parser)
+	BrowseInit(parser)
 }
