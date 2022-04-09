@@ -15,12 +15,13 @@ import (
 )
 
 var reTarget = regexp.MustCompile("[\\<>@#&!]")
+var statsbotUrl string
 
 // MarkovUseCommand create a markov chain from an URL
 func MarkovUserCommand(message *discordgo.MessageCreate, args commandArgs, channelSend bool) (string, error) {
 	userID := reTarget.ReplaceAllString(args.Word, "")
 
-	resp, err := http.Get("http://localhost:3000/userMessages/" + message.GuildID + "/" + userID)
+	resp, err := http.Get("http://" + statsbotUrl + ":3000/userMessages/" + message.GuildID + "/" + userID)
 	if err != nil {
 		log.Println(err)
 	}

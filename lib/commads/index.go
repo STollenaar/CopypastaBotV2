@@ -1,6 +1,8 @@
 package commands
 
 import (
+	"os"
+
 	"github.com/bwmarrin/discordgo"
 	"github.com/nint8835/parsley"
 )
@@ -33,6 +35,14 @@ type CommandParsed struct {
 func Init(bot *discordgo.Session, parser *parsley.Parser) {
 	Bot = DiscordBot{bot}
 	PingInit(parser)
+
+	if os.Getenv("STATSBOT_URL") != "" {
+		statsbotUrl = os.Getenv("STATSBOT_URL")
+	} else {
+
+		statsbotUrl = "localhost"
+	}
+
 	MarkovInit(parser)
 	CopyInit(parser)
 	BrowseInit(parser)
