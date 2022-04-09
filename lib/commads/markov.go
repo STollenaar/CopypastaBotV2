@@ -18,9 +18,9 @@ func MarkovCommand(message *discordgo.MessageCreate, args commandArgs) {
 	Bot.ChannelTyping(message.ChannelID)
 
 	if _, err := url.ParseRequestURI(args.Word); err == nil {
-		MarkovURLCommand(message, args)
+		MarkovURLCommand(message, args, true)
 	} else if strings.Contains(args.Word, "@") {
-		MarkovUserCommand(message, args)
+		MarkovUserCommand(message, args, true)
 	} else {
 		Bot.ChannelMessageSend(message.ChannelID, fmt.Sprintln("Not a argument was provided"))
 	}

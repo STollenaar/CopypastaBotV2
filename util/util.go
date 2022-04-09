@@ -2,6 +2,7 @@ package util
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"os"
 	"regexp"
@@ -37,15 +38,31 @@ func DisplayRedditSubreddit(subreddit string) []*reddit.Post {
 	return posts
 }
 
-func DisplayRedditPost(redditPostID string, singleEmbed bool) (embeds []discordgo.MessageEmbed) {
+func GetRedditPost(redditPostID string) *reddit.PostAndComments {
 	if len(images) == 0 {
 		images = []string{".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".gif"}
 		videos = []string{"youtube", "gfycat", "youtu"}
 	}
 	if redditClient == nil {
-		redditClient, _ = reddit.NewReadonlyClient()
+		redditClient, _ = reddit.NewClient(reddit.Credentials{
+			// userAgent: process.env.REDDIT_USER_AGENT,
+			Username: os.Getenv("REDDIT_USERNAME"),
+			Password: os.Getenv("REDDIT_PASSWORD"),
+			ID:       os.Getenv("REDDIT_CLIENT_ID"),
+			Secret:   os.Getenv("REDDIT_CLIENT_SECRET"),
+		})
 	}
-	postCommnents, _, _ := redditClient.Post.Get(context.TODO(), redditPostID)
+	postCommnents, _, err := redditClient.Post.Get(context.TODO(), redditPostID)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	return postCommnents
+}
+
+func DisplayRedditPost(redditPostID string, singleEmbed bool) (embeds []discordgo.MessageEmbed) {
+	postCommnents := GetRedditPost(redditPostID)
+
 	body := postCommnents.Post.Body
 
 	if postCommnents.Post.Body == "" {
@@ -53,7 +70,7 @@ func DisplayRedditPost(redditPostID string, singleEmbed bool) (embeds []discordg
 	}
 
 	// Getting around the 4096 word limit
-	contents := breakContent(body)
+	contents := BreakContent(body, 4096)
 	if singleEmbed {
 		contents = []string{contents[0]}
 	}
@@ -104,14 +121,14 @@ func DisplayRedditPost(redditPostID string, singleEmbed bool) (embeds []discordg
 	return embeds
 }
 
-func breakContent(content string) (result []string) {
+func BreakContent(content string, maxLength int) (result []string) {
 	words := strings.Split(content, " ")
 
 	var tmp string
 	for i, word := range words {
 		if i == 0 {
 			tmp = word
-		} else if len(tmp)+len(word) < 4096 {
+		} else if len(tmp)+len(word) < maxLength {
 			tmp += " " + word
 		} else {
 			result = append(result, tmp)

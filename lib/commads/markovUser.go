@@ -17,7 +17,7 @@ import (
 var reTarget = regexp.MustCompile("[\\<>@#&!]")
 
 // MarkovUseCommand create a markov chain from an URL
-func MarkovUserCommand(message *discordgo.MessageCreate, args commandArgs) {
+func MarkovUserCommand(message *discordgo.MessageCreate, args commandArgs, channelSend bool) (string, error) {
 	userID := reTarget.ReplaceAllString(args.Word, "")
 
 	resp, err := http.Get("http://localhost:3000/userMessages/" + message.GuildID + "/" + userID)
@@ -28,8 +28,10 @@ func MarkovUserCommand(message *discordgo.MessageCreate, args commandArgs) {
 	body, err := io.ReadAll(resp.Body)
 
 	if err != nil {
-		Bot.ChannelMessageSend(message.ChannelID, fmt.Sprintln("Something went wrong"))
-		return
+		if channelSend {
+			Bot.ChannelMessageSend(message.ChannelID, fmt.Sprintln("Something went wrong"))
+		}
+		return "", err
 	}
 
 	var messageObjects []util.MessageObject
@@ -40,7 +42,13 @@ func MarkovUserCommand(message *discordgo.MessageCreate, args commandArgs) {
 
 	textSeed := strings.Join(messages, " ")
 	markov := markov.New()
-	Bot.ChannelMessageSend(message.ChannelID, markov.ReadText(textSeed))
+
+	generated := markov.ReadText(textSeed)
+	if channelSend {
+		Bot.ChannelMessageSend(message.ChannelID, generated)
+	}
+	return generated, nil
+
 }
 
 func mapToContent(messages *[]util.MessageObject) (result []string) {

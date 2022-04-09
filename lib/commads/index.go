@@ -5,8 +5,12 @@ import (
 	"github.com/nint8835/parsley"
 )
 
+type DiscordBot struct {
+	*discordgo.Session
+}
+
 // Bot main reference to the bot
-var Bot *discordgo.Session
+var Bot DiscordBot
 
 // optionalCommandArg other basic command arg
 type optionalCommandArg struct {
@@ -27,9 +31,10 @@ type CommandParsed struct {
 }
 
 func Init(bot *discordgo.Session, parser *parsley.Parser) {
-	Bot = bot
+	Bot = DiscordBot{bot}
 	PingInit(parser)
 	MarkovInit(parser)
 	CopyInit(parser)
 	BrowseInit(parser)
+	// SpeakInit(parser)
 }
