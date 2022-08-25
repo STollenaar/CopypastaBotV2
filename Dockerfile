@@ -1,12 +1,11 @@
 FROM golang:1.18.0-alpine
 
-RUN apk update && apk add git
+ARG ARCH
+
 
 # Create app directory
 WORKDIR /usr/src/app
 
-COPY . .
+COPY CopypastaBotV2 .
 
-RUN go get .
-
-CMD go run .
+CMD ./CopypastaBotV2
