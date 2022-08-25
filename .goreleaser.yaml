@@ -19,9 +19,9 @@ archives:
 checksum:
   name_template: "checksums.txt"
 dockers:
-  - id: copypastabot-amd-build
+  - id: CopypastaBotV2-amd-build
     ids:
-      - copypastabot
+      - CopypastaBotV2
     goarch: amd64
     use: buildx
     build_flag_templates:
@@ -31,9 +31,9 @@ dockers:
       - "{{ .Env.REPO }}:{{ tolower .ProjectName }}-{{ .Version }}-amd64"
       - "{{ .Env.REPO }}:{{ tolower .ProjectName }}-latest-amd64"
     dockerfile: Dockerfile
-  - id: copypastabot-arm-build
+  - id: CopypastaBotV2-arm-build
     ids:
-      - copypastabot
+      - CopypastaBotV2
     goarch: arm64
     use: buildx
     build_flag_templates:
