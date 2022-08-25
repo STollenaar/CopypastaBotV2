@@ -39,7 +39,6 @@ func Init(bot *discordgo.Session, parser *parsley.Parser) {
 	if os.Getenv("STATSBOT_URL") != "" {
 		statsbotUrl = os.Getenv("STATSBOT_URL")
 	} else {
-
 		statsbotUrl = "localhost"
 	}
 

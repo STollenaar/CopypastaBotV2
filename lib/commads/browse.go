@@ -89,7 +89,7 @@ func BrowseHandler(session *discordgo.Session, reaction *discordgo.MessageReacti
 	}
 
 	// Check if this message still has the reactions on it after a while
-	if messageTime, _ := message.Timestamp.Parse(); time.Now().After(messageTime.Add(1 * time.Hour)) {
+	if messageTime := message.Timestamp; time.Now().After(messageTime.Add(1 * time.Hour)) {
 		Bot.ChannelMessageDelete(message.ChannelID, message.ID)
 		return
 	}
