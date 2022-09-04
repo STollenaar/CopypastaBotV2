@@ -10,12 +10,45 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/nint8835/parsley"
 
-	"copypastabot/lib"
+	"copypastabot/lib/pastaCommand"
 	"copypastabot/util"
+	"copypatebot/lib/pingCommand"
 )
 
 var (
-	bot *discordgo.Session
+	bot      *discordgo.Session
+	commands = []*discordgo.ApplicationCommand{
+		{
+			Name:        "browse",
+			Description: "Browse reddit from the confort of discord",
+		},
+		{
+			Name:        "ping",
+			Description: "Pong",
+		},
+		{
+			Name:        "pasta",
+			Description: "Post a reddit post with an url or post id",
+			Options: []*discordgo.ApplicationCommandOption{
+				&discordgo.ApplicationCommandOption{
+					Name: "URL",
+					Type: discordgo.ApplicationCommandOptionString,
+				},
+				&discordgo.ApplicationCommandOption{
+					Name: "PostID",
+					Type: discordgo.ApplicationCommandOptionString,
+				},
+			},
+		},
+		{
+			Name:        "markov",
+			Description: "Imitate someone or from a reddit post with some weird results",
+		},
+	}
+	commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
+		"ping":  pingCommand.Command,
+		"pasta": pastaCommand.Command,
+	}
 )
 
 func init() {
@@ -43,7 +76,7 @@ func init() {
 	parser := parsley.New("pasta!")
 	parser.RegisterHandler(bot)
 
-	lib.Init(bot, parser)
+	// lib.Init(bot, parser)
 	if err != nil {
 		fmt.Println("Error loading command ", err)
 		return

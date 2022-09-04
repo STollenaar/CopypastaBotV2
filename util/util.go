@@ -9,6 +9,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/vartanbeno/go-reddit/v2/reddit"
+	"golang.org/x/text/cases"
 )
 
 var (
@@ -51,7 +52,7 @@ func GetRedditPost(redditPostID string) *reddit.PostAndComments {
 	return postCommnents
 }
 
-func DisplayRedditPost(redditPostID string, singleEmbed bool) (embeds []discordgo.MessageEmbed) {
+func DisplayRedditPost(redditPostID string, singleEmbed bool) (embeds []*discordgo.MessageEmbed) {
 	postCommnents := GetRedditPost(redditPostID)
 
 	body := postCommnents.Post.Body
@@ -107,7 +108,7 @@ func DisplayRedditPost(redditPostID string, singleEmbed bool) (embeds []discordg
 				Text: ("PostID: " + postCommnents.Post.ID),
 			}
 		}
-		embeds = append(embeds, embed)
+		embeds = append(embeds, &embed)
 	}
 	return embeds
 }
@@ -137,4 +138,26 @@ func arrayContainsSub(array []string, param string) bool {
 		}
 	}
 	return false
+}
+
+// CommandParsed parsed struct for count command
+type CommandParsed map[string]string
+
+func ParseArguments(arguments []string, interaction *discordgo.InteractionCreate) (parsedArguments CommandParsed) {
+	parsedArguments = make(map[string]string)
+	// Access options in the order provided by the user.
+	options := interaction.ApplicationCommandData().Options
+	// Or convert the slice into a map
+	optionMap := make(map[string]*discordgo.ApplicationCommandInteractionDataOption, len(options))
+	for _, opt := range options {
+		optionMap[opt.Name] = opt
+	}
+
+	for _, arg := range arguments {
+		if option, ok := optionMap[arg]; ok {
+			parsedArguments[cases.Title(arg)] = option.StringValue()
+		}
+	}
+
+	return parsedArguments
 }

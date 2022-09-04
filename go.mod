@@ -3,12 +3,14 @@ module copypastabot
 go 1.17
 
 require (
+	github.com/aws/aws-sdk-go-v2/service/ssm v1.27.13
 	github.com/bwmarrin/discordgo v0.24.0
 	github.com/disgoorg/disgolink/dgolink v1.7.1
 	github.com/disgoorg/disgolink/lavalink v1.7.1
 	github.com/joho/godotenv v1.4.0
 	github.com/jonas747/dca v0.0.0-20210930103944-155f5e5f0cc7
 	github.com/nint8835/parsley v1.0.1
+	golang.org/x/text v0.3.7
 )
 
 require (
@@ -16,7 +18,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.10.0 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.3.5 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.7.0 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ssm v1.27.13 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.9.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.14.0 // indirect
 	github.com/disgoorg/log v1.2.0 // indirect
