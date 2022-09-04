@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/url"
-	"os"
 	"regexp"
 	"strings"
 
@@ -12,21 +11,26 @@ import (
 	"github.com/vartanbeno/go-reddit/v2/reddit"
 )
 
-var termRegex string
-var images []string
-var videos []string
-var redditClient *reddit.Client
+var (
+	images       []string
+	videos       []string
+	redditClient *reddit.Client
+)
+
+func init() {
+	redditClient, _ = reddit.NewClient(reddit.Credentials{
+		ID:       ConfigFile.GetRedditClientID(),
+		Secret:   ConfigFile.GetRedditClientSecret(),
+		Username: ConfigFile.GetRedditUsername(),
+		Password: ConfigFile.GetRedditPassword(),
+	})
+
+	images = []string{".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".gif"}
+	videos = []string{"youtube", "gfycat", "youtu"}
+}
 
 func IsTerminalWord(word string) bool {
-	if termRegex == "" {
-		termRegex = os.Getenv("TERMINAL_REGEX")
-
-		// Setting the default regex
-		if termRegex == "" {
-			termRegex = `(\.|,|:|;|\?|!)$`
-		}
-	}
-	compiled, _ := regexp.MatchString(termRegex, word)
+	compiled, _ := regexp.MatchString(ConfigFile.TERMINAL_REGEX, word)
 	return compiled
 }
 
@@ -39,19 +43,6 @@ func DisplayRedditSubreddit(subreddit string) []*reddit.Post {
 }
 
 func GetRedditPost(redditPostID string) *reddit.PostAndComments {
-	if len(images) == 0 {
-		images = []string{".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".gif"}
-		videos = []string{"youtube", "gfycat", "youtu"}
-	}
-	if redditClient == nil {
-		redditClient, _ = reddit.NewClient(reddit.Credentials{
-			// userAgent: process.env.REDDIT_USER_AGENT,
-			Username: os.Getenv("REDDIT_USERNAME"),
-			Password: os.Getenv("REDDIT_PASSWORD"),
-			ID:       os.Getenv("REDDIT_CLIENT_ID"),
-			Secret:   os.Getenv("REDDIT_CLIENT_SECRET"),
-		})
-	}
 	postCommnents, _, err := redditClient.Post.Get(context.TODO(), redditPostID)
 	if err != nil {
 		fmt.Println(err)

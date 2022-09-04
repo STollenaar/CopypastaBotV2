@@ -11,11 +11,14 @@ import (
 	"github.com/nint8835/parsley"
 
 	"copypastabot/lib"
+	"copypastabot/util"
 )
 
-var bot *discordgo.Session
+var (
+	bot *discordgo.Session
+)
 
-func main() {
+func init() {
 	err := godotenv.Load(".env")
 
 	if err != nil {
@@ -23,7 +26,7 @@ func main() {
 		return
 	}
 
-	bot, err = discordgo.New("Bot " + os.Getenv("DISCORD_TOKEN"))
+	bot, err = discordgo.New("Bot " + util.ConfigFile.GetDiscordToken())
 	if err != nil {
 		fmt.Println("Error loading bot ", err)
 		return
@@ -45,8 +48,10 @@ func main() {
 		fmt.Println("Error loading command ", err)
 		return
 	}
+}
 
-	err = bot.Open()
+func main() {
+	err := bot.Open()
 	if err != nil {
 		fmt.Println("Error starting bot ", err)
 		return
