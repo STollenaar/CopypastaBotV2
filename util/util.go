@@ -10,6 +10,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/vartanbeno/go-reddit/v2/reddit"
 	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 var (
@@ -155,7 +156,7 @@ func ParseArguments(arguments []string, interaction *discordgo.InteractionCreate
 
 	for _, arg := range arguments {
 		if option, ok := optionMap[arg]; ok {
-			parsedArguments[cases.Title(arg)] = option.StringValue()
+			parsedArguments[cases.Title(language.English).String(arg)] = option.StringValue()
 		}
 	}
 

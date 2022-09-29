@@ -1,7 +1,9 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -10,17 +12,30 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/nint8835/parsley"
 
+	"copypastabot/lib/browseCommand"
 	"copypastabot/lib/pastaCommand"
+	"copypastabot/lib/pingCommand"
 	"copypastabot/util"
-	"copypatebot/lib/pingCommand"
 )
 
 var (
-	bot      *discordgo.Session
+	bot *discordgo.Session
+
+	GuildID        = flag.String("guild", "", "Test guild ID. If not passed - bot registers commands globally")
+	RemoveCommands = flag.Bool("rmcmd", true, "Remove all commands after shutdowning or not")
+
 	commands = []*discordgo.ApplicationCommand{
 		{
 			Name:        "browse",
 			Description: "Browse reddit from the confort of discord",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Name:        "name",
+					Type:        discordgo.ApplicationCommandOptionString,
+					Description: "Name of the subreddit",
+					Required:    false,
+				},
+			},
 		},
 		{
 			Name:        "ping",
@@ -30,28 +45,35 @@ var (
 			Name:        "pasta",
 			Description: "Post a reddit post with an url or post id",
 			Options: []*discordgo.ApplicationCommandOption{
-				&discordgo.ApplicationCommandOption{
-					Name: "URL",
-					Type: discordgo.ApplicationCommandOptionString,
+				{
+					Name:        "url",
+					Type:        discordgo.ApplicationCommandOptionString,
+					Description: "URL of the reddit post",
+					Required:    false,
 				},
-				&discordgo.ApplicationCommandOption{
-					Name: "PostID",
-					Type: discordgo.ApplicationCommandOptionString,
+				{
+					Name:        "postid",
+					Type:        discordgo.ApplicationCommandOptionString,
+					Description: "The Reddit postID of the post",
+					Required:    false,
 				},
 			},
 		},
-		{
-			Name:        "markov",
-			Description: "Imitate someone or from a reddit post with some weird results",
-		},
+		// {
+		// 	Name:        "markov",
+		// 	Description: "Imitate someone or from a reddit post with some weird results",
+		// },
 	}
 	commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
-		"ping":  pingCommand.Command,
-		"pasta": pastaCommand.Command,
+		"browse": browseCommand.Command,
+		"pasta":  pastaCommand.Command,
+		"ping":   pingCommand.Command,
 	}
 )
 
 func init() {
+	flag.Parse()
+
 	err := godotenv.Load(".env")
 
 	if err != nil {
@@ -65,6 +87,23 @@ func init() {
 		return
 	}
 
+	bot.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		if h, ok := commandHandlers[i.ApplicationCommandData().Name]; ok {
+			h(s, i)
+		}
+	})
+
+}
+
+func init() {
+
+	parser := parsley.New("pasta!")
+	parser.RegisterHandler(bot)
+
+	// lib.Init(bot, parser)
+}
+
+func main() {
 	bot.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsGuildMessages |
 		discordgo.IntentsGuildMessageReactions |
 		discordgo.IntentsGuildMessageTyping |
@@ -73,25 +112,22 @@ func init() {
 		discordgo.IntentsGuildPresences |
 		discordgo.IntentsGuilds)
 
-	parser := parsley.New("pasta!")
-	parser.RegisterHandler(bot)
-
-	// lib.Init(bot, parser)
-	if err != nil {
-		fmt.Println("Error loading command ", err)
-		return
-	}
-}
-
-func main() {
 	err := bot.Open()
 	if err != nil {
 		fmt.Println("Error starting bot ", err)
 		return
 	}
+	registeredCommands := make([]*discordgo.ApplicationCommand, len(commands))
+	for i, v := range commands {
+		cmd, err := bot.ApplicationCommandCreate(bot.State.User.ID, *GuildID, v)
+		if err != nil {
+			log.Panicf("Cannot create '%v' command: %v", v.Name, err)
+		}
+		registeredCommands[i] = cmd
+	}
 
 	sc := make(chan os.Signal, 1)
-	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
+	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, syscall.SIGTERM)
 	<-sc
 	bot.Close()
 }

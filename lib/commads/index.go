@@ -34,7 +34,6 @@ type CommandParsed struct {
 
 func Init(bot *discordgo.Session, parser *parsley.Parser) {
 	Bot = DiscordBot{bot}
-	PingInit(parser)
 
 	if os.Getenv("STATSBOT_URL") != "" {
 		statsbotUrl = os.Getenv("STATSBOT_URL")
@@ -43,7 +42,5 @@ func Init(bot *discordgo.Session, parser *parsley.Parser) {
 	}
 
 	MarkovInit(parser)
-	CopyInit(parser)
-	BrowseInit(parser)
 	// SpeakInit(parser)
 }

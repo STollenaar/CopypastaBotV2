@@ -1,11 +1,10 @@
-package commands
+package browseCommand
 
 import (
 	"copypastabot/util"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/nint8835/parsley"
 	"github.com/vartanbeno/go-reddit/v2/reddit"
 )
 
@@ -17,38 +16,44 @@ type browserTracker struct {
 	page      int
 }
 
-var activeBrowsers map[string]*browserTracker
+var (
+	activeBrowsers map[string]*browserTracker
+	Bot            *discordgo.Session
+)
 
-func BrowseInit(parser *parsley.Parser) {
-	parser.NewCommand("browse", "Browse reddit from the comfort of discord", BrowseCommand)
+func init() {
 	activeBrowsers = make(map[string]*browserTracker)
-	Bot.AddHandler(BrowseHandler)
 }
 
-// BrowseCommand basic handler
-func BrowseCommand(message *discordgo.MessageCreate, args optionalCommandArg) {
-	Bot.ChannelTyping(message.ChannelID)
-	if args.Word != "" {
-		args.Word = "all"
+func Command(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
+	if Bot == nil {
+		Bot = bot
 	}
 
-	if activeBrowsers[message.Author.ID] != nil {
-		userBrowserSession := activeBrowsers[message.Author.ID]
+	parsedArguments := util.ParseArguments([]string{"name"}, interaction)
+
+	Bot.ChannelTyping(interaction.ChannelID)
+	if parsedArguments["Name"] != "" {
+		parsedArguments["Name"] = "all"
+	}
+
+	if activeBrowsers[interaction.Message.Author.ID] != nil {
+		userBrowserSession := activeBrowsers[interaction.Message.Author.ID]
 		Bot.ChannelMessageDelete(userBrowserSession.channelID, userBrowserSession.messageID)
 	}
 
-	posts := util.DisplayRedditSubreddit(args.Word)
+	posts := util.DisplayRedditSubreddit(parsedArguments["Name"])
 
 	embed := util.DisplayRedditPost(posts[0].ID, true)[0]
 
-	sendMessage, _ := Bot.ChannelMessageSendComplex(message.ChannelID, &discordgo.MessageSend{
-		Embed: &embed,
+	sendMessage, _ := Bot.ChannelMessageSendComplex(interaction.ChannelID, &discordgo.MessageSend{
+		Embed: embed,
 	})
 
-	activeBrowsers[message.Author.ID] = &browserTracker{
+	activeBrowsers[interaction.Message.Author.ID] = &browserTracker{
 		messageID: sendMessage.ID,
 		channelID: sendMessage.ChannelID,
-		subReddit: args.Word,
+		subReddit: parsedArguments["Name"],
 		page:      0,
 		postIDs:   mapToID(posts),
 	}
@@ -58,8 +63,8 @@ func BrowseCommand(message *discordgo.MessageCreate, args optionalCommandArg) {
 	Bot.MessageReactionAdd(sendMessage.ChannelID, sendMessage.ID, "▶")
 
 	time.AfterFunc(1*time.Hour, func() {
-		Bot.ChannelMessageDelete(message.ChannelID, message.ID)
-		delete(activeBrowsers, message.Author.ID)
+		Bot.ChannelMessageDelete(interaction.ChannelID, interaction.Message.ID)
+		delete(activeBrowsers, interaction.Message.Author.ID)
 	})
 }
 
@@ -152,7 +157,7 @@ func doEmbedHandler(message *discordgo.Message, reaction *discordgo.MessageReact
 
 	embed := util.DisplayRedditPost(userBrowserSession.postIDs[userBrowserSession.page], true)[0]
 
-	Bot.ChannelMessageEditEmbed(userBrowserSession.channelID, userBrowserSession.messageID, &embed)
+	Bot.ChannelMessageEditEmbed(userBrowserSession.channelID, userBrowserSession.messageID, embed)
 	Bot.MessageReactionRemove(userBrowserSession.channelID, userBrowserSession.messageID, reaction.Emoji.Name, reaction.UserID)
 	Bot.MessageReactionRemove(userBrowserSession.channelID, userBrowserSession.messageID, "🔄", Bot.State.User.ID)
 }

@@ -1,10 +1,10 @@
 module copypastabot
 
-go 1.17
+go 1.18
 
 require (
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.27.13
-	github.com/bwmarrin/discordgo v0.24.0
+	github.com/bwmarrin/discordgo v0.26.1
 	github.com/disgoorg/disgolink/dgolink v1.7.1
 	github.com/disgoorg/disgolink/lavalink v1.7.1
 	github.com/joho/godotenv v1.4.0
