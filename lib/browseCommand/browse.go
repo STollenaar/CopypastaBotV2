@@ -28,29 +28,33 @@ func init() {
 func Command(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
 	if Bot == nil {
 		Bot = bot
+		Bot.AddHandler(BrowseHandler)
 	}
 
-	parsedArguments := util.ParseArguments([]string{"name"}, interaction)
+	Bot.InteractionRespond(interaction.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: "Loading Posts...",
+		},
+	})
 
-	Bot.ChannelTyping(interaction.ChannelID)
+	parsedArguments := util.ParseArguments([]string{"name"}, interaction)
 	if parsedArguments["Name"] != "" {
 		parsedArguments["Name"] = "all"
 	}
-
-	if activeBrowsers[interaction.Message.Author.ID] != nil {
-		userBrowserSession := activeBrowsers[interaction.Message.Author.ID]
+	userID := interaction.Member.User.ID
+	if userBrowserSession := activeBrowsers[userID]; userBrowserSession != nil {
 		Bot.ChannelMessageDelete(userBrowserSession.channelID, userBrowserSession.messageID)
 	}
 
 	posts := util.DisplayRedditSubreddit(parsedArguments["Name"])
-
 	embed := util.DisplayRedditPost(posts[0].ID, true)[0]
 
-	sendMessage, _ := Bot.ChannelMessageSendComplex(interaction.ChannelID, &discordgo.MessageSend{
-		Embed: embed,
+	sendMessage, _ := Bot.InteractionResponseEdit(interaction.Interaction, &discordgo.WebhookEdit{
+		Embeds: &[]*discordgo.MessageEmbed{embed},
 	})
 
-	activeBrowsers[interaction.Message.Author.ID] = &browserTracker{
+	activeBrowsers[userID] = &browserTracker{
 		messageID: sendMessage.ID,
 		channelID: sendMessage.ChannelID,
 		subReddit: parsedArguments["Name"],
@@ -63,9 +67,10 @@ func Command(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
 	Bot.MessageReactionAdd(sendMessage.ChannelID, sendMessage.ID, "▶")
 
 	time.AfterFunc(1*time.Hour, func() {
-		Bot.ChannelMessageDelete(interaction.ChannelID, interaction.Message.ID)
-		delete(activeBrowsers, interaction.Message.Author.ID)
+		Bot.ChannelMessageDelete(sendMessage.ChannelID, sendMessage.ID)
+		delete(activeBrowsers, userID)
 	})
+
 }
 
 func BrowseHandler(session *discordgo.Session, reaction *discordgo.MessageReactionAdd) {
