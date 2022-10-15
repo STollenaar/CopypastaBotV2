@@ -39,7 +39,7 @@ func Command(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
 	})
 
 	parsedArguments := util.ParseArguments([]string{"name"}, interaction)
-	if parsedArguments["Name"] != "" {
+	if parsedArguments["Name"] == "" {
 		parsedArguments["Name"] = "all"
 	}
 	userID := interaction.Member.User.ID

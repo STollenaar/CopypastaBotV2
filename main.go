@@ -13,6 +13,7 @@ import (
 	"github.com/nint8835/parsley"
 
 	"copypastabot/lib/browseCommand"
+	"copypastabot/lib/markovCommand"
 	"copypastabot/lib/pastaCommand"
 	"copypastabot/lib/pingCommand"
 	"copypastabot/util"
@@ -59,15 +60,24 @@ var (
 				},
 			},
 		},
-		// {
-		// 	Name:        "markov",
-		// 	Description: "Imitate someone or from a reddit post with some weird results",
-		// },
+		{
+			Name:        "markov",
+			Description: "Imitate someone or from a reddit post with some weird results",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Name:        "url",
+					Type:        discordgo.ApplicationCommandOptionString,
+					Description: "URL of the page to make a markov chain from",
+					Required:    true,
+				},
+			},
+		},
 	}
 	commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
 		"browse": browseCommand.Command,
 		"pasta":  pastaCommand.Command,
 		"ping":   pingCommand.Command,
+		"markov": markovCommand.Command,
 	}
 )
 
