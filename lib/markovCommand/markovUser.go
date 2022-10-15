@@ -1,39 +1,45 @@
-package commands
+package markovCommand
 
 import (
 	"copypastabot/lib/markov"
 	"copypastabot/util"
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
-	"regexp"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
 )
 
-var reTarget = regexp.MustCompile("[\\<>@#&!]")
-var statsbotUrl string
+// MarkovUserCommand create a markov chain from an user
+func MarkovUserCommand(interaction *discordgo.InteractionCreate, user string) {
 
-// MarkovUseCommand create a markov chain from an URL
-func MarkovUserCommand(message *discordgo.MessageCreate, args commandArgs, channelSend bool) (string, error) {
-	userID := reTarget.ReplaceAllString(args.Word, "")
+	generated, err := getUserMarkov(interaction.GuildID, user)
 
-	resp, err := http.Get("http://" + statsbotUrl + ":3000/userMessages/" + message.GuildID + "/" + userID)
+	if err != nil {
+		INVALID_URL_RESPONSE := "Not a valid URL was provided"
+		Bot.InteractionResponseEdit(interaction.Interaction, &discordgo.WebhookEdit{
+			Content: &INVALID_URL_RESPONSE,
+		})
+		return
+	}
+
+	Bot.InteractionResponseEdit(interaction.Interaction, &discordgo.WebhookEdit{
+		Content: &generated,
+	})
+}
+
+// getUserMarkov create a markov chain from an user
+func getUserMarkov(guildID, userID string) (string, error) {
+	resp, err := http.Get("http://" + statsbotUrl + ":3000/userMessages/" + guildID + "/" + userID)
 	if err != nil {
 		log.Println(err)
-	}
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-
-	if err != nil {
-		if channelSend {
-			Bot.ChannelMessageSend(message.ChannelID, fmt.Sprintln("Something went wrong"))
-		}
 		return "", err
 	}
+
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
 
 	var messageObjects []util.MessageObject
 	json.Unmarshal(body, &messageObjects)
@@ -45,11 +51,7 @@ func MarkovUserCommand(message *discordgo.MessageCreate, args commandArgs, chann
 	markov := markov.New()
 
 	generated := markov.ReadText(textSeed)
-	if channelSend {
-		Bot.ChannelMessageSend(message.ChannelID, generated)
-	}
 	return generated, nil
-
 }
 
 func mapToContent(messages *[]util.MessageObject) (result []string) {
