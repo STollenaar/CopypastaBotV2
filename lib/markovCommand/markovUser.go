@@ -15,12 +15,12 @@ import (
 // MarkovUserCommand create a markov chain from an user
 func MarkovUserCommand(interaction *discordgo.InteractionCreate, user string) {
 
-	generated, err := getUserMarkov(interaction.GuildID, user)
+	generated, err := GetUserMarkov(interaction.GuildID, user)
 
 	if err != nil {
-		INVALID_URL_RESPONSE := "Not a valid URL was provided"
+		INVALID_USER_RESPONSE := "Not a valid User was provided"
 		Bot.InteractionResponseEdit(interaction.Interaction, &discordgo.WebhookEdit{
-			Content: &INVALID_URL_RESPONSE,
+			Content: &INVALID_USER_RESPONSE,
 		})
 		return
 	}
@@ -30,8 +30,8 @@ func MarkovUserCommand(interaction *discordgo.InteractionCreate, user string) {
 	})
 }
 
-// getUserMarkov create a markov chain from an user
-func getUserMarkov(guildID, userID string) (string, error) {
+// GetUserMarkov create a markov chain from an user
+func GetUserMarkov(guildID, userID string) (string, error) {
 	resp, err := http.Get("http://" + statsbotUrl + ":3000/userMessages/" + guildID + "/" + userID)
 	if err != nil {
 		log.Println(err)
