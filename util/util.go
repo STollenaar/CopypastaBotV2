@@ -156,7 +156,7 @@ func ParseArguments(arguments []string, interaction *discordgo.InteractionCreate
 
 	for _, arg := range arguments {
 		if option, ok := optionMap[arg]; ok {
-			parsedArguments[cases.Title(language.English).String(arg)] = option.StringValue()
+			parsedArguments[cases.Title(language.English).String(arg)] = option.Value.(string)
 		}
 	}
 

@@ -10,12 +10,12 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
-	"github.com/nint8835/parsley"
 
 	"copypastabot/lib/browseCommand"
 	"copypastabot/lib/markovCommand"
 	"copypastabot/lib/pastaCommand"
 	"copypastabot/lib/pingCommand"
+	"copypastabot/lib/speakCommand"
 	"copypastabot/util"
 )
 
@@ -72,8 +72,32 @@ var (
 				},
 				{
 					Name:        "user",
-					Type:        discordgo.ApplicationCommandOptionMentionable,
+					Type:        discordgo.ApplicationCommandOptionString,
 					Description: "User to create a markov chain of",
+					Required:    false,
+				},
+			},
+		},
+		{
+			Name:        "speak",
+			Description: "Imitate someone or from a reddit post with some weird results, and listen to the beauty",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Name:        "url",
+					Type:        discordgo.ApplicationCommandOptionString,
+					Description: "URL of the page to make a markov chain from",
+					Required:    false,
+				},
+				{
+					Name:        "user",
+					Type:        discordgo.ApplicationCommandOptionString,
+					Description: "User to create a markov chain of",
+					Required:    false,
+				},
+				{
+					Name:        "redditpost",
+					Type:        discordgo.ApplicationCommandOptionString,
+					Description: "Reddit post id",
 					Required:    false,
 				},
 			},
@@ -84,6 +108,7 @@ var (
 		"pasta":  pastaCommand.Command,
 		"ping":   pingCommand.Command,
 		"markov": markovCommand.Command,
+		"speak":  speakCommand.Command,
 	}
 )
 
@@ -109,14 +134,6 @@ func init() {
 		}
 	})
 
-}
-
-func init() {
-
-	parser := parsley.New("pasta!")
-	parser.RegisterHandler(bot)
-
-	// lib.Init(bot, parser)
 }
 
 func main() {

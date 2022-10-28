@@ -9,8 +9,8 @@ require (
 	github.com/disgoorg/disgolink/lavalink v1.7.1
 	github.com/joho/godotenv v1.4.0
 	github.com/jonas747/dca v0.0.0-20210930103944-155f5e5f0cc7
-	github.com/nint8835/parsley v1.0.1
 	golang.org/x/text v0.3.7
+	gopkg.in/hraban/opus.v2 v2.0.0-20220302220929-eeacdbcb92d0
 )
 
 require (
@@ -22,6 +22,8 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sts v1.14.0 // indirect
 	github.com/disgoorg/log v1.2.0 // indirect
 	github.com/disgoorg/snowflake/v2 v2.0.0 // indirect
+	github.com/jfreymuth/oggvorbis v1.0.4 // indirect
+	github.com/jfreymuth/vorbis v1.0.2 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/jonas747/ogg v0.0.0-20161220051205-b4f6f4cf3757 // indirect
 	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e // indirect
@@ -38,7 +40,6 @@ require (
 	github.com/aws/smithy-go v1.13.2 // indirect
 	github.com/golang/protobuf v1.2.0 // indirect
 	github.com/google/go-querystring v1.0.0 // indirect
-	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/vartanbeno/go-reddit/v2 v2.0.1
 	golang.org/x/crypto v0.0.0-20210421170649-83a5a9bb288b // indirect
