@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -77,6 +78,10 @@ func Command(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
 	if url, ok := parsedArguments["Url"]; ok {
 		markov, err = markovCommand.GetMarkovURL(url)
 	} else if user, ok := parsedArguments["User"]; ok {
+		user = strings.ReplaceAll(user, "<", "")
+		user = strings.ReplaceAll(user, ">", "")
+		user = strings.ReplaceAll(user, "@", "")
+
 		markov, err = markovCommand.GetUserMarkov(interaction.GuildID, user)
 	} else if post, ok := parsedArguments["Redditpost"]; ok {
 		postCommnents := util.GetRedditPost(post)

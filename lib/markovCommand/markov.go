@@ -3,6 +3,7 @@ package markovCommand
 import (
 	"copypastabot/util"
 	"regexp"
+	"strings"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -35,6 +36,9 @@ func Command(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
 	if url, ok := parsedArguments["Url"]; ok {
 		MarkovURLCommand(interaction, url)
 	} else if user, ok := parsedArguments["User"]; ok {
+		user = strings.ReplaceAll(user, "<", "")
+		user = strings.ReplaceAll(user, ">", "")
+		user = strings.ReplaceAll(user, "@", "")
 		MarkovUserCommand(interaction, user)
 	} else {
 		unknownState := "Unknown state entered"
