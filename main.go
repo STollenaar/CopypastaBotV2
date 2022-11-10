@@ -9,7 +9,6 @@ import (
 	"syscall"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/joho/godotenv"
 
 	"copypastabot/lib/browseCommand"
 	"copypastabot/lib/markovCommand"
@@ -115,14 +114,7 @@ var (
 func init() {
 	flag.Parse()
 
-	err := godotenv.Load(".env")
-
-	if err != nil {
-		fmt.Println("Error loading environment variables")
-		return
-	}
-
-	bot, err = discordgo.New("Bot " + util.ConfigFile.GetDiscordToken())
+	bot, err := discordgo.New("Bot " + util.ConfigFile.GetDiscordToken())
 	if err != nil {
 		fmt.Println("Error loading bot ", err)
 		return
