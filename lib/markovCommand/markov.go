@@ -32,9 +32,9 @@ func Command(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
 
 	parsedArguments := util.ParseArguments([]string{"url", "user"}, interaction)
 
-	if url, ok := parsedArguments["url"]; ok {
+	if url, ok := parsedArguments["Url"]; ok {
 		MarkovURLCommand(interaction, url)
-	} else if user, ok := parsedArguments["user"]; ok {
+	} else if user, ok := parsedArguments["User"]; ok {
 		MarkovUserCommand(interaction, user)
 	} else {
 		unknownState := "Unknown state entered"
