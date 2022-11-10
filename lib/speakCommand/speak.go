@@ -1,14 +1,13 @@
 package speakCommand
 
 import (
-	"bytes"
 	"context"
 	"copypastabot/lib/markovCommand"
 	"copypastabot/util"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -16,7 +15,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/polly"
 	"github.com/aws/aws-sdk-go-v2/service/polly/types"
 	"github.com/bwmarrin/discordgo"
-	"github.com/jfreymuth/oggvorbis"
 	"github.com/jonas747/dca"
 )
 
@@ -35,15 +33,6 @@ type Queue struct {
 }
 
 func init() {
-	// node, _ = link.AddNode(context.TODO(), lavalink.NodeConfig{
-	// 	Name:        "copypastabot", // a unique node name
-	// 	Host:        "localhost",
-	// 	Port:        "2333",
-	// 	Password:    "",
-	// 	Secure:      false, // ws or wss
-	// 	ResumingKey: "",    // only needed if you want to resume a lavalink session
-	// })
-
 	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithSharedConfigProfile("personal"))
 	if err != nil {
 		panic("configuration error, " + err.Error())
@@ -71,10 +60,12 @@ func Command(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
 		})
 		return
 	} else {
+		resp := "I am preparing my beautifull voice"
+
 		Bot.InteractionRespond(interaction.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
-				Content: "I am preparing my beautifull voice",
+				Content: resp,
 			},
 		})
 	}
@@ -115,7 +106,7 @@ func Command(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
 		synthed, err := pollyClient.SynthesizeSpeech(context.TODO(), &polly.SynthesizeSpeechInput{
 			Text:         aws.String(content),
 			TextType:     types.TextTypeText,
-			OutputFormat: types.OutputFormatOggVorbis,
+			OutputFormat: types.OutputFormatMp3,
 			Engine:       types.EngineNeural,
 			VoiceId:      types.VoiceIdMatthew,
 			LanguageCode: types.LanguageCodeEnUs,
@@ -160,36 +151,42 @@ func doSpeech() {
 
 	// Send the buffer data.
 	stream := currentSpeech.synthed.AudioStream
-	r, err := oggvorbis.NewReader(stream)
-	// handle error
+
+	vc, _ := Bot.ChannelVoiceJoin(currentSpeech.guildID, vs.ChannelID, false, false)
+	vc.Speaking(true)
+
+	// write the whole body at once
+	outFile, err := os.Create("tmp.mp3")
 	if err != nil {
-		// handle error
+		fmt.Println(err)
+	}
+	// handle err
+	_, err = io.Copy(outFile, stream)
+	if err != nil {
+		fmt.Println(err)
+	}
+	outFile.Close()
+	// Encoding a file and saving it to disk
+	encodeSession, err := dca.EncodeFile("tmp.mp3", dca.StdEncodeOptions)
+	if err != nil {
 		fmt.Println(err)
 	}
 
-	buffer := make([]float32, 8192)
-	vc, _ := Bot.ChannelVoiceJoin(currentSpeech.guildID, vs.ChannelID, false, false)
-	vc.Speaking(true)
-	for {
-		n, err := r.Read(buffer)
-
-		buffed := buffer[:n]
-		buff := float32ToByte(buffed)
-		bbuff, _ := readOpus(buff)
-
-		for _, buf := range bbuff {
-			vc.OpusSend <- buf
-		}
-
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			// handle error
-			fmt.Println(err)
-		}
-
+	if err != nil {
+		// Handle the error
+		fmt.Println(err)
 	}
+
+	done := make(chan error)
+	dca.NewStream(encodeSession, vc, done)
+	err = <-done
+	if err != nil && err != io.EOF {
+		fmt.Println(err)
+	}
+
+	// Make sure everything is cleaned up, that for example the encoding process if any issues happened isnt lingering around
+	encodeSession.Cleanup()
+	os.Remove("tmp.mp3")
 
 	// Stop speaking
 	vc.Speaking(false)
@@ -211,36 +208,4 @@ func findUserVoiceState(userid string) (*discordgo.VoiceState, error) {
 		}
 	}
 	return nil, errors.New("could not find user's voice state")
-}
-
-// Reads an opus packet to send over the vc.OpusSend channel
-func readOpus(buffed []byte) (buffer [][]byte, err error) {
-	if err != nil {
-		return nil, err
-	}
-
-	for i := 0; i < len(buffed); i += 960 {
-		end := i + 960
-
-		// necessary check to avoid slicing beyond
-		// slice capacity
-		if end > len(buffed) {
-			end = len(buffed)
-		}
-
-		buffer = append(buffer, buffed[i:end])
-	}
-
-	return buffer, err
-}
-
-func float32ToByte(f []float32) []byte {
-	var buf bytes.Buffer
-	for _, value := range f {
-		err := binary.Write(&buf, binary.BigEndian, value)
-		if err != nil {
-			fmt.Println("binary.Write failed:", err)
-		}
-	}
-	return buf.Bytes()
 }
