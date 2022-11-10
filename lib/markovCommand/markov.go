@@ -2,7 +2,6 @@ package markovCommand
 
 import (
 	"copypastabot/util"
-	"os"
 	"regexp"
 
 	"github.com/bwmarrin/discordgo"
@@ -15,7 +14,6 @@ var (
 )
 
 func init() {
-	statsbotUrl = os.Getenv("STATSBOT_URL")
 	reTarget = regexp.MustCompile(`[\<>@#&!]`)
 }
 
@@ -38,5 +36,10 @@ func Command(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
 		MarkovURLCommand(interaction, url)
 	} else if user, ok := parsedArguments["user"]; ok {
 		MarkovUserCommand(interaction, user)
+	} else {
+		unknownState := "Unknown state entered"
+		Bot.InteractionResponseEdit(interaction.Interaction, &discordgo.WebhookEdit{
+			Content: &unknownState,
+		})
 	}
 }

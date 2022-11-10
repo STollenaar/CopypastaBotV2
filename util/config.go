@@ -27,6 +27,7 @@ type Config struct {
 	AWS_PARAMETER_REDDIT_CLIENT_SECRET string
 
 	TERMINAL_REGEX string
+	STATISTICS_BOT string
 }
 
 var (
@@ -58,6 +59,7 @@ func init() {
 		REDDIT_CLIENT_ID:                   os.Getenv("REDDIT_CLIENT_ID"),
 		REDDIT_CLIENT_SECRET:               os.Getenv("REDDIT_CLIENT_SECRET"),
 		TERMINAL_REGEX:                     os.Getenv("TERMINAL_REGEX"),
+		STATISTICS_BOT:                     os.Getenv("STATSBOT_URL"),
 	}
 
 	if ConfigFile.TERMINAL_REGEX == "" {
