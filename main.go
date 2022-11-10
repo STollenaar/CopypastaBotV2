@@ -113,8 +113,8 @@ var (
 
 func init() {
 	flag.Parse()
-
-	bot, err := discordgo.New("Bot " + util.ConfigFile.GetDiscordToken())
+	var err error
+	bot, err = discordgo.New("Bot " + util.ConfigFile.GetDiscordToken())
 	if err != nil {
 		fmt.Println("Error loading bot ", err)
 		return
