@@ -32,7 +32,7 @@ func MarkovUserCommand(interaction *discordgo.InteractionCreate, user string) {
 
 // GetUserMarkov create a markov chain from an user
 func GetUserMarkov(guildID, userID string) (string, error) {
-	resp, err := http.Get("http://" + statsbotUrl + ":3000/userMessages/" + guildID + "/" + userID)
+	resp, err := http.Get("http://" + util.ConfigFile.STATISTICS_BOT + ":3000/userMessages/" + guildID + "/" + userID)
 	if err != nil {
 		log.Println(err)
 		return "", err
