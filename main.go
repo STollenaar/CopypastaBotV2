@@ -125,10 +125,8 @@ func init() {
 			h(s, i)
 		}
 	})
+	// bot.AddHandler(onEvent)
 
-}
-
-func main() {
 	bot.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsGuildMessages |
 		discordgo.IntentsGuildMessageReactions |
 		discordgo.IntentsGuildMessageTyping |
@@ -136,12 +134,17 @@ func main() {
 		discordgo.IntentsGuildMembers |
 		discordgo.IntentsGuildPresences |
 		discordgo.IntentsGuilds)
+}
+
+func main() {
 
 	err := bot.Open()
 	if err != nil {
 		fmt.Println("Error starting bot ", err)
 		return
 	}
+
+	speakCommand.VCInterupt(bot)
 	registeredCommands := make([]*discordgo.ApplicationCommand, len(commands))
 	for i, v := range commands {
 		cmd, err := bot.ApplicationCommandCreate(bot.State.User.ID, *GuildID, v)
@@ -155,4 +158,8 @@ func main() {
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, syscall.SIGTERM)
 	<-sc
 	bot.Close()
+}
+
+func onEvent(session *discordgo.Session, event *discordgo.Event) {
+	fmt.Println(event.Type)
 }

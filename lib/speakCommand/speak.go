@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand"
 	"os"
 	"strings"
 	"time"
@@ -25,6 +26,8 @@ var (
 	queue  []*Queue
 	stream *dca.StreamingSession
 	Bot    *discordgo.Session
+
+	guildVC map[string]*discordgo.VoiceConnection
 )
 
 type Queue struct {
@@ -40,7 +43,7 @@ func init() {
 	}
 
 	pollyClient = polly.NewFromConfig(cfg)
-
+	guildVC = make(map[string]*discordgo.VoiceConnection)
 }
 
 // Command create a tts experience for the generated markov
@@ -143,6 +146,7 @@ func doSpeech() {
 
 	vs, err := findUserVoiceState(currentSpeech.userID)
 	if err != nil {
+		fmt.Println(err)
 		if len(queue) > 0 {
 			doSpeech()
 		}
@@ -158,6 +162,7 @@ func doSpeech() {
 	stream := currentSpeech.synthed.AudioStream
 
 	vc, _ := Bot.ChannelVoiceJoin(currentSpeech.guildID, vs.ChannelID, false, false)
+	guildVC[currentSpeech.guildID] = vc
 	vc.Speaking(true)
 
 	// write the whole body at once
@@ -174,11 +179,6 @@ func doSpeech() {
 	// Encoding a file and saving it to disk
 	encodeSession, err := dca.EncodeFile("tmp.mp3", dca.StdEncodeOptions)
 	if err != nil {
-		fmt.Println(err)
-	}
-
-	if err != nil {
-		// Handle the error
 		fmt.Println(err)
 	}
 
@@ -201,6 +201,9 @@ func doSpeech() {
 
 	if len(queue) > 0 {
 		doSpeech()
+	} else {
+		vc.Disconnect()
+		guildVC[currentSpeech.guildID] = nil
 	}
 }
 
@@ -213,4 +216,108 @@ func findUserVoiceState(userid string) (*discordgo.VoiceState, error) {
 		}
 	}
 	return nil, errors.New("could not find user's voice state")
+}
+
+func VCInterupt(bot *discordgo.Session) {
+	if Bot == nil {
+		Bot = bot
+	}
+
+	ticker := time.NewTicker(time.Duration(10) * time.Minute)
+
+	go func() {
+		for {
+			<-ticker.C
+			// do stuff
+			guildChannels := checkVCs()
+			for guild, channelVS := range guildChannels {
+				if channelVS == nil || len(channelVS.users) == 0 {
+					continue
+				}
+				user := getRandomUser(channelVS)
+				user = strings.ReplaceAll(user, "<", "")
+				user = strings.ReplaceAll(user, ">", "")
+				user = strings.ReplaceAll(user, "@", "")
+
+				markov, err := markovCommand.GetUserMarkov(guild, user)
+				if err != nil {
+					fmt.Println(err)
+					continue
+				}
+				contents := util.BreakContent(markov, 2950)
+				for _, content := range contents {
+					synthed, err := pollyClient.SynthesizeSpeech(context.TODO(), &polly.SynthesizeSpeechInput{
+						Text:         aws.String(content),
+						TextType:     types.TextTypeText,
+						OutputFormat: types.OutputFormatMp3,
+						Engine:       types.EngineNeural,
+						VoiceId:      types.VoiceIdMatthew,
+						LanguageCode: types.LanguageCodeEnUs,
+					})
+
+					if err == nil {
+						queue = append(queue, &Queue{
+							synthed: synthed,
+							userID:  user,
+							guildID: guild,
+						})
+					}
+				}
+				if stream != nil {
+					if finished, _ := stream.Finished(); !finished {
+						return
+					}
+				}
+
+				doSpeech()
+			}
+		}
+	}()
+}
+
+type channelVS struct {
+	channelID string
+	users     []string
+}
+
+func getRandomUser(channelVS *channelVS) (user string) {
+	index := rand.Intn(len(channelVS.users))
+	return channelVS.users[index]
+}
+
+func checkVCs() (guildChannelStates map[string]*channelVS) {
+	guildChannelStates = make(map[string]*channelVS)
+	for _, guild := range Bot.State.Guilds {
+		guild, _ = Bot.State.Guild(guild.ID)
+
+		if guildVC[guild.ID] != nil {
+			continue
+		}
+		channelStates := make(map[string]*channelVS)
+		for _, vs := range guild.VoiceStates {
+			if vs.UserID == Bot.State.User.ID {
+				continue
+			}
+
+			if channelStates[vs.GuildID] == nil {
+				channelStates[vs.GuildID] = &channelVS{
+					users:     []string{vs.UserID},
+					channelID: vs.ChannelID,
+				}
+			} else {
+				channelStates[vs.GuildID].users = append(channelStates[vs.GuildID].users, vs.UserID)
+			}
+		}
+		guildChannelStates[guild.ID] = getMostChannelUsers(channelStates)
+	}
+	return guildChannelStates
+}
+
+func getMostChannelUsers(channels map[string]*channelVS) (channelVS *channelVS) {
+	for _, v := range channels {
+		if channelVS == nil || len(v.users) > len(channelVS.users) {
+			channelVS = v
+		}
+	}
+	return channelVS
 }

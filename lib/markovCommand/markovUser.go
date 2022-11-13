@@ -4,6 +4,7 @@ import (
 	"copypastabot/lib/markov"
 	"copypastabot/util"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -32,7 +33,10 @@ func MarkovUserCommand(interaction *discordgo.InteractionCreate, user string) {
 
 // GetUserMarkov create a markov chain from an user
 func GetUserMarkov(guildID, userID string) (string, error) {
-	resp, err := http.Get("http://" + util.ConfigFile.STATISTICS_BOT + ":3000/userMessages/" + guildID + "/" + userID)
+	req := fmt.Sprintf("http://%s:3000/userMessages/%s/%s", util.ConfigFile.STATISTICS_BOT, guildID, userID)
+	fmt.Printf("Fetching with request: %s\n", req)
+	resp, err := http.Get(req)
+
 	if err != nil {
 		log.Println(err)
 		return "", err
