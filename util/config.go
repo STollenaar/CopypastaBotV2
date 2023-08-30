@@ -83,17 +83,26 @@ func init() {
 	}
 }
 
-// initializing the ssm client
 func init() {
-	cfg, err := config.LoadDefaultConfig(context.TODO())
+
+	// Create a config with the credentials provider.
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithSharedConfigProfile("personal"),
+		config.WithRegion(ConfigFile.AWS_REGION),
+	)
+
 	if err != nil {
-		log.Fatal(err)
+		if _, isProfileNotExistError := err.(config.SharedConfigProfileNotExistError); isProfileNotExistError {
+			cfg, err = config.LoadDefaultConfig(context.TODO(),
+				config.WithRegion(ConfigFile.AWS_REGION),
+			)
+		}
+		if err != nil {
+			log.Fatal("Error loading AWS config:", err)
+		}
 	}
 
-	cfg.Region = ConfigFile.AWS_REGION
-
 	ssmClient = ssm.NewFromConfig(cfg)
-
 }
 
 func (c *Config) GetDiscordToken() string {
