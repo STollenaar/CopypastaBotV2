@@ -1,14 +1,37 @@
-package pasta
+package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
 
+	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/stollenaar/copypastabotv2/internal/util"
 
 	"github.com/bwmarrin/discordgo"
 )
+
+func main() {
+	lambda.Start(handler)
+}
+
+func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	response := discordgo.InteractionResponseData{
+		Content: "Pong",
+	}
+	data, _ := json.Marshal(response)
+
+	return events.APIGatewayProxyResponse{
+		StatusCode: http.StatusOK,
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
+		Body: string(data),
+	}, nil
+}
 
 func Command(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
 	bot.ChannelTyping(interaction.ChannelID)

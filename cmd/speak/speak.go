@@ -1,11 +1,13 @@
-package speak
+package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"math/rand"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -13,6 +15,8 @@ import (
 	"github.com/stollenaar/copypastabotv2/cmd/markov"
 	"github.com/stollenaar/copypastabotv2/internal/util"
 
+	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/polly"
@@ -46,6 +50,26 @@ func init() {
 	pollyClient = polly.NewFromConfig(cfg)
 	guildVC = make(map[string]*discordgo.VoiceConnection)
 }
+
+func main() {
+	lambda.Start(handler)
+}
+
+func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	response := discordgo.InteractionResponseData{
+		Content: "Pong",
+	}
+	data, _ := json.Marshal(response)
+
+	return events.APIGatewayProxyResponse{
+		StatusCode: http.StatusOK,
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
+		Body: string(data),
+	}, nil
+}
+
 
 // Command create a tts experience for the generated markov
 func Command(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {

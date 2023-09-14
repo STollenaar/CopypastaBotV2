@@ -1,4 +1,4 @@
-package markov
+package main
 
 import (
 	URL "net/url"

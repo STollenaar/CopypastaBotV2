@@ -1,4 +1,4 @@
-package markov
+package main
 
 import (
 	"encoding/json"

@@ -11,6 +11,7 @@ require (
 )
 
 require (
+	github.com/aws/aws-lambda-go v1.41.0 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.8.0 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.10.0 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.3.5 // indirect
@@ -19,7 +20,9 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sts v1.14.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/jonas747/ogg v0.0.0-20161220051205-b4f6f4cf3757 // indirect
-	github.com/stretchr/testify v1.7.0 // indirect
+	github.com/stollenaar/copypastabotv2/internal/markov v0.0.0-20230914223259-1f7a298f3fc4 // indirect
+	github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20230914223259-1f7a298f3fc4 // indirect
+	github.com/stretchr/testify v1.7.2 // indirect
 	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e // indirect
 )
 
