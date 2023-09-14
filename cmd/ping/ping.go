@@ -1,4 +1,4 @@
-package pingCommand
+package ping
 
 import (
 	"github.com/bwmarrin/discordgo"

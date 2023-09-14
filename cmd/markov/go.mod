@@ -1,4 +1,4 @@
-module github.com/stollenaar/copypastabot
+module github.com/stollenaar/copypastabot/cmd/markov
 
 go 1.18
 

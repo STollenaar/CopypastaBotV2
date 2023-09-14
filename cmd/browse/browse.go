@@ -1,8 +1,9 @@
-package browseCommand
+package browse
 
 import (
-	"copypastabot/util"
 	"time"
+
+	"github.com/stollenaar/copypastabot/internal/util"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/vartanbeno/go-reddit/v2/reddit"

@@ -10,12 +10,12 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 
-	"copypastabot/lib/browseCommand"
-	"copypastabot/lib/markovCommand"
-	"copypastabot/lib/pastaCommand"
-	"copypastabot/lib/pingCommand"
-	"copypastabot/lib/speakCommand"
-	"copypastabot/util"
+	"github.com/stollenaar/copypastabot/lib/browseCommand"
+	"github.com/stollenaar/copypastabot/lib/markovCommand"
+	"github.com/stollenaar/copypastabot/lib/pastaCommand"
+	"github.com/stollenaar/copypastabot/lib/pingCommand"
+	"github.com/stollenaar/copypastabot/lib/speakCommand"
+	"github.com/stollenaar/copypastabot/util"
 )
 
 var (

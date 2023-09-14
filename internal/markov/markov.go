@@ -2,11 +2,12 @@ package markov
 
 import (
 	"bytes"
-	"copypastabot/util"
 	"io/ioutil"
 	"log"
 	"os"
 	"strings"
+
+	"github.com/stollenaar/copypastabot/internal/util"
 
 	"github.com/PuerkitoBio/goquery"
 )

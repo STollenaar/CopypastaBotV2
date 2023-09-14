@@ -1,10 +1,11 @@
-package pastaCommand
+package pasta
 
 import (
-	"copypastabot/util"
 	"fmt"
 	"net/url"
 	"strings"
+
+	"github.com/stollenaar/copypastabot/internal/util"
 
 	"github.com/bwmarrin/discordgo"
 )

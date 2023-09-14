@@ -1,14 +1,15 @@
-package markovCommand
+package markov
 
 import (
-	"copypastabot/lib/markov"
-	"copypastabot/util"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"strings"
+
+	"github.com/stollenaar/copypastabot/internal/markov"
+	"github.com/stollenaar/copypastabot/internal/util"
 
 	"github.com/bwmarrin/discordgo"
 )

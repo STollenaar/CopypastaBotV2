@@ -1,9 +1,10 @@
-package markovCommand
+package markov
 
 import (
-	"copypastabot/util"
 	"regexp"
 	"strings"
+
+	"github.com/stollenaar/copypastabot/internal/util"
 
 	"github.com/bwmarrin/discordgo"
 )

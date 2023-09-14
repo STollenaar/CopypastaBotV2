@@ -1,8 +1,9 @@
-package markovCommand
+package markov
 
 import (
-	"copypastabot/lib/markov"
 	URL "net/url"
+
+	"github.com/stollenaar/copypastabot/internal/markov"
 
 	"github.com/bwmarrin/discordgo"
 )

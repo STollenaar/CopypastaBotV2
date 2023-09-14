@@ -1,4 +1,4 @@
-module github.com/stollenaar/copypastabot
+module github.com/stollenaar/copypastabot/cmd/ping
 
 go 1.18
 

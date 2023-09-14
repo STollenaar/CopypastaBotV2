@@ -1,9 +1,7 @@
-package speakCommand
+package speak
 
 import (
 	"context"
-	"copypastabot/lib/markovCommand"
-	"copypastabot/util"
 	"errors"
 	"fmt"
 	"io"
@@ -11,6 +9,9 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/stollenaar/copypastabot/cmd/markov"
+	"github.com/stollenaar/copypastabot/internal/util"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -79,13 +80,13 @@ func Command(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
 	parsedArguments := util.ParseArguments([]string{"url", "user", "redditpost"}, interaction)
 
 	if url, ok := parsedArguments["Url"]; ok {
-		markov, err = markovCommand.GetMarkovURL(url)
+		markov, err = markov.GetMarkovURL(url)
 	} else if user, ok := parsedArguments["User"]; ok {
 		user = strings.ReplaceAll(user, "<", "")
 		user = strings.ReplaceAll(user, ">", "")
 		user = strings.ReplaceAll(user, "@", "")
 
-		markov, err = markovCommand.GetUserMarkov(interaction.GuildID, user)
+		markov, err = markov.GetUserMarkov(interaction.GuildID, user)
 	} else if post, ok := parsedArguments["Redditpost"]; ok {
 		postCommnents := util.GetRedditPost(post)
 		markov = postCommnents.Post.Body
@@ -239,7 +240,7 @@ func VCInterupt(bot *discordgo.Session) {
 				user = strings.ReplaceAll(user, ">", "")
 				user = strings.ReplaceAll(user, "@", "")
 
-				markov, err := markovCommand.GetUserMarkov(guild, user)
+				markov, err := markov.GetUserMarkov(guild, user)
 				if err != nil {
 					fmt.Println(err)
 					continue
