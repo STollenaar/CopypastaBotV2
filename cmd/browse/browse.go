@@ -3,7 +3,7 @@ package browse
 import (
 	"time"
 
-	"github.com/stollenaar/copypastabot/internal/util"
+	"github.com/stollenaar/copypastabotv2/internal/util"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/vartanbeno/go-reddit/v2/reddit"

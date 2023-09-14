@@ -1,4 +1,4 @@
-module github.com/stollenaar/copypastabot/internal/util
+module github.com/stollenaar/copypastabotv2/internal/util
 
 go 1.18
 

@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/stollenaar/copypastabot/internal/util"
+	"github.com/stollenaar/copypastabotv2/internal/util"
 
 	"github.com/PuerkitoBio/goquery"
 )

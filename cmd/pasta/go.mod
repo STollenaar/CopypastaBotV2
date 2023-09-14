@@ -1,4 +1,4 @@
-module github.com/stollenaar/copypastabot/cmd/pasta
+module github.com/stollenaar/copypastabotv2/cmd/pasta
 
 go 1.18
 

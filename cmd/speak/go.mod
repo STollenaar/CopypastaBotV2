@@ -1,4 +1,4 @@
-module github.com/stollenaar/copypastabot/cmd/speak
+module github.com/stollenaar/copypastabotv2/cmd/speak
 
 go 1.18
 

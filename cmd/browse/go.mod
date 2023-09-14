@@ -1,4 +1,4 @@
-module github.com/stollenaar/copypastabot/cmd/browse
+module github.com/stollenaar/copypastabotv2/cmd/browse
 
 go 1.18
 

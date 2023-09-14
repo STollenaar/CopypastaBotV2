@@ -3,7 +3,7 @@ package markov
 import (
 	URL "net/url"
 
-	"github.com/stollenaar/copypastabot/internal/markov"
+	"github.com/stollenaar/copypastabotv2/internal/markov"
 
 	"github.com/bwmarrin/discordgo"
 )

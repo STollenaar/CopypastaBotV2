@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/stollenaar/copypastabot/cmd/markov"
-	"github.com/stollenaar/copypastabot/internal/util"
+	"github.com/stollenaar/copypastabotv2/cmd/markov"
+	"github.com/stollenaar/copypastabotv2/internal/util"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
