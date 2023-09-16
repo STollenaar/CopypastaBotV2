@@ -11,3 +11,8 @@ type MessageObject struct {
 	Content   []string             `bson:"Content" json:"Content"`
 	Date      discordgo.TimeStamps `bson:"Date" json:"Date"`
 }
+
+type ResponseObject struct {
+	Data discordgo.InteractionResponseData `json:"data"`
+	Type int                               `json:"type"`
+}
