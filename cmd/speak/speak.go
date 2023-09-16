@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/stollenaar/copypastabotv2/cmd/markov"
+	markovCommand "github.com/stollenaar/copypastabotv2/cmd/markov"
 	"github.com/stollenaar/copypastabotv2/internal/util"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -70,7 +71,6 @@ func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 	}, nil
 }
 
-
 // Command create a tts experience for the generated markov
 func Command(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
 	if Bot == nil {
@@ -104,13 +104,13 @@ func Command(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
 	parsedArguments := util.ParseArguments([]string{"url", "user", "redditpost"}, interaction)
 
 	if url, ok := parsedArguments["Url"]; ok {
-		markov, err = markov.GetMarkovURL(url)
+		markov, err = markovCommand.GetMarkovURL(url)
 	} else if user, ok := parsedArguments["User"]; ok {
 		user = strings.ReplaceAll(user, "<", "")
 		user = strings.ReplaceAll(user, ">", "")
 		user = strings.ReplaceAll(user, "@", "")
 
-		markov, err = markov.GetUserMarkov(interaction.GuildID, user)
+		markov, err = markovCommand.GetUserMarkov(interaction.GuildID, user)
 	} else if post, ok := parsedArguments["Redditpost"]; ok {
 		postCommnents := util.GetRedditPost(post)
 		markov = postCommnents.Post.Body
