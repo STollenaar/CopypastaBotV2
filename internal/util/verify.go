@@ -17,5 +17,5 @@ func IsVerified(body, signature, timestamp string) bool {
 		fmt.Println(fmt.Errorf("error decoding public key %w", err))
 		return false
 	}
-	return ed25519.Verify([]byte(timestamp+body), decodedSig, decodedKey)
+	return ed25519.Verify(decodedKey, []byte(timestamp+body), decodedSig)
 }
