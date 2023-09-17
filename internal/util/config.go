@@ -47,6 +47,8 @@ func init() {
 		}
 	}
 
+	err = nil
+
 	ConfigFile = &Config{
 		DISCORD_TOKEN:                      os.Getenv("DISCORD_TOKEN"),
 		AWS_REGION:                         os.Getenv("AWS_REGION"),
