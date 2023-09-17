@@ -22,6 +22,7 @@ type Config struct {
 	AWS_REGION string
 
 	AWS_PARAMETER_DISCORD_TOKEN        string
+	AWS_PARAMETER_PUBLIC_DISCORD_TOKEN string
 	AWS_PARAMETER_REDDIT_USERNAME      string
 	AWS_PARAMETER_REDDIT_PASSWORD      string
 	AWS_PARAMETER_REDDIT_CLIENT_ID     string
@@ -53,6 +54,7 @@ func init() {
 		DISCORD_TOKEN:                      os.Getenv("DISCORD_TOKEN"),
 		AWS_REGION:                         os.Getenv("AWS_REGION"),
 		AWS_PARAMETER_DISCORD_TOKEN:        os.Getenv("AWS_PARAMETER_DISCORD_TOKEN"),
+		AWS_PARAMETER_PUBLIC_DISCORD_TOKEN: os.Getenv("AWS_PARAMETER_PUBLIC_DISCORD_TOKEN"),
 		AWS_PARAMETER_REDDIT_USERNAME:      os.Getenv("AWS_PARAMETER_REDDIT_USERNAME"),
 		AWS_PARAMETER_REDDIT_PASSWORD:      os.Getenv("AWS_PARAMETER_REDDIT_PASSWORD"),
 		AWS_PARAMETER_REDDIT_CLIENT_ID:     os.Getenv("AWS_PARAMETER_REDDIT_CLIENT_ID"),
@@ -71,6 +73,9 @@ func init() {
 
 	if ConfigFile.DISCORD_TOKEN == "" && ConfigFile.AWS_PARAMETER_DISCORD_TOKEN == "" {
 		err = fmt.Errorf("DISCORD_TOKEN or AWS_PARAMETER_DISCORD_TOKEN is not set. %w", err)
+	}
+	if ConfigFile.AWS_PARAMETER_PUBLIC_DISCORD_TOKEN == "" {
+		err = fmt.Errorf("AWS_PARAMETER_PUBLIC_DISCORD_TOKEN is not set. %w", err)
 	}
 	if ConfigFile.AWS_PARAMETER_REDDIT_CLIENT_ID == "" && ConfigFile.REDDIT_CLIENT_ID == "" {
 		err = fmt.Errorf("REDDIT_CLIENT_ID or AWS_PARAMETER_REDDIT_CLIENT_ID if not set. %w", err)
