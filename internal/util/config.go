@@ -2,6 +2,7 @@ package util
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 
@@ -49,7 +50,7 @@ func init() {
 	ConfigFile = &Config{
 		DISCORD_TOKEN:                      os.Getenv("DISCORD_TOKEN"),
 		AWS_REGION:                         os.Getenv("AWS_REGION"),
-		AWS_PARAMETER_DISCORD_TOKEN:        os.Getenv("AWS_PARAMETER_NAME"),
+		AWS_PARAMETER_DISCORD_TOKEN:        os.Getenv("AWS_PARAMETER_DISCORD_TOKEN"),
 		AWS_PARAMETER_REDDIT_USERNAME:      os.Getenv("AWS_PARAMETER_REDDIT_USERNAME"),
 		AWS_PARAMETER_REDDIT_PASSWORD:      os.Getenv("AWS_PARAMETER_REDDIT_PASSWORD"),
 		AWS_PARAMETER_REDDIT_CLIENT_ID:     os.Getenv("AWS_PARAMETER_REDDIT_CLIENT_ID"),
@@ -67,39 +68,32 @@ func init() {
 	}
 
 	if ConfigFile.DISCORD_TOKEN == "" && ConfigFile.AWS_PARAMETER_DISCORD_TOKEN == "" {
-		log.Fatal("DISCORD_TOKEN or AWS_PARAMETER_DISCORD_TOKEN is not set")
+		err = fmt.Errorf("DISCORD_TOKEN or AWS_PARAMETER_DISCORD_TOKEN is not set. %w", err)
 	}
 	if ConfigFile.AWS_PARAMETER_REDDIT_CLIENT_ID == "" && ConfigFile.REDDIT_CLIENT_ID == "" {
-		log.Fatal("REDDIT_CLIENT_ID or AWS_PARAMETER_REDDIT_CLIENT_ID if not set")
+		err = fmt.Errorf("REDDIT_CLIENT_ID or AWS_PARAMETER_REDDIT_CLIENT_ID if not set. %w", err)
 	}
 	if ConfigFile.AWS_PARAMETER_REDDIT_USERNAME == "" && ConfigFile.REDDIT_USERNAME == "" {
-		log.Fatal("REDDIT_USERNAME or AWS_PARAMETER_REDDIT_USERNAME if not set")
+		err = fmt.Errorf("REDDIT_USERNAME or AWS_PARAMETER_REDDIT_USERNAME if not set. %w", err)
 	}
 	if ConfigFile.AWS_PARAMETER_REDDIT_CLIENT_SECRET == "" && ConfigFile.REDDIT_CLIENT_SECRET == "" {
-		log.Fatal("REDDIT_CLIENT_SECRET or REDDIT_CLIENT_SECRET if not set")
+		err = fmt.Errorf("REDDIT_CLIENT_SECRET or REDDIT_CLIENT_SECRET if not set. %w", err)
 	}
 	if ConfigFile.AWS_PARAMETER_REDDIT_PASSWORD == "" && ConfigFile.REDDIT_PASSWORD == "" {
-		log.Fatal("AWS_PARAMETER_REDDIT_PASSWORD or REDDIT_PASSWORD if not set")
+		err = fmt.Errorf("AWS_PARAMETER_REDDIT_PASSWORD or REDDIT_PASSWORD if not set. %w", err)
+	}
+	if err != nil {
+		log.Fatal(err)
 	}
 }
 
 func init() {
 
 	// Create a config with the credentials provider.
-	cfg, err := config.LoadDefaultConfig(context.TODO(),
-		config.WithSharedConfigProfile("personal"),
-		config.WithRegion(ConfigFile.AWS_REGION),
-	)
+	cfg, err := config.LoadDefaultConfig(context.TODO())
 
 	if err != nil {
-		if _, isProfileNotExistError := err.(config.SharedConfigProfileNotExistError); isProfileNotExistError {
-			cfg, err = config.LoadDefaultConfig(context.TODO(),
-				config.WithRegion(ConfigFile.AWS_REGION),
-			)
-		}
-		if err != nil {
-			log.Fatal("Error loading AWS config:", err)
-		}
+		log.Fatal("Error loading AWS config:", err)
 	}
 
 	ssmClient = ssm.NewFromConfig(cfg)
@@ -146,7 +140,7 @@ func getAWSParameter(parameterName string) string {
 		WithDecryption: true,
 	})
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(fmt.Errorf("error from fetching parameter %s. With error: %w", parameterName, err))
 	}
 	return *out.Parameter.Value
 }

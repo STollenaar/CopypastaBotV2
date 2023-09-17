@@ -3,6 +3,7 @@ package util
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/url"
 	"regexp"
 	"strings"
@@ -20,19 +21,26 @@ var (
 )
 
 func init() {
-	redditClient, _ = reddit.NewClient(reddit.Credentials{
+	r, err := reddit.NewClient(reddit.Credentials{
 		ID:       ConfigFile.GetRedditClientID(),
 		Secret:   ConfigFile.GetRedditClientSecret(),
 		Username: ConfigFile.GetRedditUsername(),
 		Password: ConfigFile.GetRedditPassword(),
 	})
+	if err != nil {
+		log.Fatalln(fmt.Errorf("failure initializing reddit client %w", err))
+	}
+	redditClient = r
 
 	images = []string{".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".gif"}
 	videos = []string{"youtube", "gfycat", "youtu"}
 }
 
 func IsTerminalWord(word string) bool {
-	compiled, _ := regexp.MatchString(ConfigFile.TERMINAL_REGEX, word)
+	compiled, err := regexp.MatchString(ConfigFile.TERMINAL_REGEX, word)
+	if err != nil {
+		fmt.Println(fmt.Errorf("error matching string with regex %s, on word %s. %w", ConfigFile.TERMINAL_REGEX, word, err))
+	}
 	return compiled
 }
 
@@ -40,14 +48,18 @@ func DisplayRedditSubreddit(subreddit string) []*reddit.Post {
 	if redditClient == nil {
 		redditClient, _ = reddit.NewReadonlyClient()
 	}
-	posts, _, _ := redditClient.Subreddit.HotPosts(context.TODO(), subreddit, &reddit.ListOptions{})
+	posts, _, err := redditClient.Subreddit.HotPosts(context.TODO(), subreddit, &reddit.ListOptions{})
+	if err != nil {
+		fmt.Println(fmt.Errorf("error fetching hot posts for subreddit %s. With error: %w", subreddit, err))
+	}
+
 	return posts
 }
 
 func GetRedditPost(redditPostID string) *reddit.PostAndComments {
 	postCommnents, _, err := redditClient.Post.Get(context.TODO(), redditPostID)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println(fmt.Errorf("error fetching from reddit with error: %w", err))
 	}
 
 	return postCommnents

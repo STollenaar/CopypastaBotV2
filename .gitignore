@@ -18,3 +18,4 @@ dist
 terraform/.terraform/*
 cmd/**/*.zip
 cmd/**/bootstrap
+cmd/**/main
