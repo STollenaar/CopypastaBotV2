@@ -14,5 +14,5 @@ type MessageObject struct {
 
 type ResponseObject struct {
 	Data discordgo.InteractionResponseData `json:"data"`
-	Type int                               `json:"type"`
+	Type discordgo.InteractionResponseType `json:"type"`
 }

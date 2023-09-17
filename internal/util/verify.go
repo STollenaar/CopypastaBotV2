@@ -6,6 +6,7 @@ import (
 	"fmt"
 )
 
+// Verifying the signature
 func IsVerified(body, signature, timestamp string) bool {
 	decodedSig, err := hex.DecodeString(signature)
 	if err != nil {
