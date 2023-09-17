@@ -12,7 +12,7 @@ func IsVerified(body, signature, timestamp string) bool {
 		fmt.Println(fmt.Errorf("error decoding signature %w", err))
 		return false
 	}
-	decodedKey, err := hex.DecodeString(ConfigFile.AWS_PARAMETER_PUBLIC_DISCORD_TOKEN)
+	decodedKey, err := hex.DecodeString(ConfigFile.GetPublicDiscordToken())
 	if err != nil {
 		fmt.Println(fmt.Errorf("error decoding public key %w", err))
 		return false

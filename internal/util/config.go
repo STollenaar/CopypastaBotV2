@@ -113,6 +113,13 @@ func (c *Config) GetDiscordToken() string {
 	return getAWSParameter(c.AWS_PARAMETER_DISCORD_TOKEN)
 }
 
+func (c *Config) GetPublicDiscordToken() string {
+	if c.DISCORD_TOKEN != "" {
+		return c.DISCORD_TOKEN
+	}
+	return getAWSParameter(c.AWS_PARAMETER_PUBLIC_DISCORD_TOKEN)
+}
+
 func (c *Config) GetRedditUsername() string {
 	if c.REDDIT_USERNAME != "" {
 		return c.REDDIT_USERNAME
