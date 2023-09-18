@@ -10,6 +10,12 @@ resource "null_resource" "go_build" {
   }
 }
 
+resource "aws_cloudwatch_log_group" "lambda_function_log_group" {
+  for_each = var.functions
+  name     = "/aws/lambda/${each.key}"
+  retention_in_days = 7
+}
+
 resource "aws_lambda_function" "lambda_function" {
   depends_on = [
     data.archive_file.lambda_zip

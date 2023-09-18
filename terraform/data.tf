@@ -32,8 +32,23 @@ data "aws_iam_policy_document" "lambda_execution_role_policy_document" {
     actions = [
       "ssm:GetParametersByPath",
       "ssm:GetParameters",
+      "ssm:GetParameter",
       "ssm:DescribeParameters",
     ]
     resources = ["*"]
+  }
+}
+# IAM policy document for the Lambda to access the parameter store
+data "aws_iam_policy_document" "lambda_execution_invocation_document" {
+  statement {
+    sid    = "InvokeLambdas"
+    effect = "Allow"
+    actions = [
+      "lambda:InvokeFunction",
+      "lambda:InvokeAsync",
+    ]
+    resources = [
+      "arn:aws:lambda:*:405934267152:function:*",
+    ]
   }
 }

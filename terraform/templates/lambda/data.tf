@@ -53,7 +53,7 @@ data "aws_iam_policy_document" "lambda_execution_role_policy_document" {
       "logs:CreateLogGroup"
     ]
     resources = [
-      "arn:aws:logs:ca-central-1:${data.aws_caller_identity.current.account_id}:log-group:/aws/cmd/${each.key}*"
+      "arn:aws:logs:ca-central-1:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/${each.key}*"
     ]
   }
   statement {
