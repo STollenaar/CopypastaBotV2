@@ -156,10 +156,8 @@ func arrayContainsSub(array []string, param string) bool {
 // CommandParsed parsed struct for count command
 type CommandParsed map[string]string
 
-func ParseArguments(arguments []string, interaction *discordgo.InteractionCreate) (parsedArguments CommandParsed) {
+func ParseArguments(arguments []string, options []*discordgo.ApplicationCommandInteractionDataOption) (parsedArguments CommandParsed) {
 	parsedArguments = make(map[string]string)
-	// Access options in the order provided by the user.
-	options := interaction.ApplicationCommandData().Options
 	// Or convert the slice into a map
 	optionMap := make(map[string]*discordgo.ApplicationCommandInteractionDataOption, len(options))
 	for _, opt := range options {
