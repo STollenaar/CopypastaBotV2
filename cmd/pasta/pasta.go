@@ -19,9 +19,37 @@ func main() {
 }
 
 func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	response := discordgo.InteractionResponseData{
-		Content: "Pong",
+	d, _ := json.Marshal(req)
+	fmt.Println(string(d))
+	var interaction discordgo.Interaction
+
+	json.Unmarshal([]byte(req.Body), &interaction)
+	fmt.Println(interaction.ApplicationCommandData().Options)
+	parsedArguments := util.ParseArguments([]string{"url", "postid"}, interaction.ApplicationCommandData().Options)
+	fmt.Println(parsedArguments)
+	response := util.ResponseObject{
+		Data: discordgo.InteractionResponseData{
+			Content: fmt.Sprintln("Something went wrong"),
+		},
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
 	}
+
+	if parsedArguments["Url"] != "" {
+		if uri, err := url.ParseRequestURI(parsedArguments["Url"]); err == nil {
+			path := strings.Split(uri.Path, "/")
+			postID := findIndex(path, "comments")
+			if postID != -1 {
+				parsedArguments["Postid"] = path[postID+1]
+			}
+			parsedArguments["Postid"] = path[postID+1]
+		}
+	}
+	if parsedArguments["Postid"] != "" {
+		embeds := util.DisplayRedditPost(parsedArguments["Postid"], false)
+		response.Data.Embeds = embeds
+		response.Data.Content = ""
+	}
+
 	data, _ := json.Marshal(response)
 
 	return events.APIGatewayProxyResponse{
@@ -31,46 +59,6 @@ func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 		},
 		Body: string(data),
 	}, nil
-}
-
-func Command(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
-	bot.ChannelTyping(interaction.ChannelID)
-
-	parsedArguments := util.ParseArguments([]string{"URL", "PostID"}, interaction)
-
-	if parsedArguments["URL"] != "" {
-		if uri, err := url.ParseRequestURI(parsedArguments["URL"]); err == nil {
-			path := strings.Split(uri.Path, "/")
-			postID := findIndex(path, "comments")
-			if postID == -1 {
-				bot.InteractionRespond(interaction.Interaction, &discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseChannelMessageWithSource,
-					Data: &discordgo.InteractionResponseData{
-						Content: fmt.Sprintln("Something went wrong"),
-					},
-				})
-				return
-			}
-			parsedArguments["PostID"] = path[postID+1]
-		}
-	}
-	if parsedArguments["PostID"] != "" {
-		embeds := util.DisplayRedditPost(parsedArguments["PostID"], false)
-		bot.InteractionRespond(interaction.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Embeds: embeds,
-			},
-		})
-	} else {
-		// Error
-		bot.InteractionRespond(interaction.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: fmt.Sprintln("Something went wrong"),
-			},
-		})
-	}
 }
 
 func findIndex(array []string, param string) int {
