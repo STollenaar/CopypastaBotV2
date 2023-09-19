@@ -20,6 +20,7 @@ type ResponseObject struct {
 type SQSObject struct {
 	Type          string `json:"type,omitempty"`
 	Data          string `json:"data"`
+	GuildID       string `json:"guildID`
 	Token         string `json:"token"`
 	ApplicationID string `json:"applicationID"`
 }
