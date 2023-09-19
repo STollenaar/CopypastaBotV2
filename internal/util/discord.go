@@ -14,9 +14,14 @@ const (
 
 func SendRequest(interactionID, interactionToken string, data []byte) {
 	// Create a HTTP post request
-	_, err := http.NewRequest("POST", fmt.Sprintf(URL, interactionID, interactionToken), bytes.NewBuffer(data))
+	req, err := http.NewRequest("POST", fmt.Sprintf(URL, interactionID, interactionToken), bytes.NewBuffer(data))
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
+	}
+	client := &http.Client{}
+	_, err = client.Do(req)
+	if err != nil {
+		fmt.Println(err)
 	}
 }
 
