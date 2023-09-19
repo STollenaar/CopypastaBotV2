@@ -27,6 +27,7 @@ type Config struct {
 	AWS_PARAMETER_REDDIT_PASSWORD      string
 	AWS_PARAMETER_REDDIT_CLIENT_ID     string
 	AWS_PARAMETER_REDDIT_CLIENT_SECRET string
+	AWS_SQS_URL                        string
 
 	TERMINAL_REGEX string
 	STATISTICS_BOT string
