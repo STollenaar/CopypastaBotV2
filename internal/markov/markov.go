@@ -2,6 +2,7 @@ package markov
 
 import (
 	"bytes"
+	"errors"
 	"io/ioutil"
 	"log"
 	"os"
@@ -44,7 +45,7 @@ func (m *markov) ReadFile(filePath string) string {
 	return m.generate()
 }
 
-func (m *markov) ReadURL(URL string) string {
+func (m *markov) ReadURL(URL string) (string, error) {
 	// Open web page
 	doc, err := goquery.NewDocument(URL)
 	if err != nil {
@@ -56,8 +57,11 @@ func (m *markov) ReadURL(URL string) string {
 		text := s.Find("p").Text()
 		m.parse(text)
 	})
+	if len(m.states) < 10 {
+		return "", errors.New("Article from URL couldn't be parsed")
+	}
 
-	return m.generate()
+	return m.generate(), nil
 }
 
 func (m *markov) StateDictionary() map[[2]string][]string {

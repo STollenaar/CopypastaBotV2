@@ -13,6 +13,5 @@ func GetMarkovURL(url string) (string, error) {
 	}
 	markov := New()
 
-	generated := markov.ReadURL(u.String())
-	return generated, nil
+	return markov.ReadURL(u.String())
 }

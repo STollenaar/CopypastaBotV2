@@ -21,25 +21,6 @@ func init() {
 	reTarget = regexp.MustCompile(`[\<>@#&!]`)
 }
 
-
-// MarkovUserCommand create a markov chain from an user
-// func MarkovUserCommand(interaction *discordgo.InteractionCreate, user string) {
-
-// 	generated, err := GetUserMarkov(interaction.GuildID, user)
-
-// 	if err != nil {
-// 		INVALID_USER_RESPONSE := "Not a valid User was provided"
-// 		Bot.InteractionResponseEdit(interaction.Interaction, &discordgo.WebhookEdit{
-// 			Content: &INVALID_USER_RESPONSE,
-// 		})
-// 		return
-// 	}
-
-// 	Bot.InteractionResponseEdit(interaction.Interaction, &discordgo.WebhookEdit{
-// 		Content: &generated,
-// 	})
-// }
-
 // GetUserMarkov create a markov chain from an user
 func GetUserMarkov(guildID, userID string) (string, error) {
 	req := fmt.Sprintf("http://%s:3000/userMessages/%s/%s", util.ConfigFile.STATISTICS_BOT, guildID, userID)
