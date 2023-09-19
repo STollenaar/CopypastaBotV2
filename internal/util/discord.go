@@ -1,10 +1,24 @@
 package util
 
 import (
+	"bytes"
 	"crypto/ed25519"
 	"encoding/hex"
 	"fmt"
+	"net/http"
 )
+
+const (
+	URL = "https://discord.com/api/v10/interactions/%s/%s/callback"
+)
+
+func SendRequest(interactionID, interactionToken string, data []byte) {
+	// Create a HTTP post request
+	_, err := http.NewRequest("POST", fmt.Sprintf(URL, interactionID, interactionToken), bytes.NewBuffer(data))
+	if err != nil {
+		panic(err)
+	}
+}
 
 // Verifying the signature
 func IsVerified(body, signature, timestamp string) bool {
