@@ -14,7 +14,6 @@ const (
 
 func SendRequest(interactionID, interactionToken string, data []byte) {
 	// Create a HTTP post request
-	fmt.Printf("Sending with data %s", string(data))
 	req, err := http.NewRequest("POST", fmt.Sprintf(URL, interactionID, interactionToken), bytes.NewBuffer(data))
 	req.Header.Add("Content-Type", "application/json")
 	if err != nil {
