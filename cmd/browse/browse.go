@@ -62,7 +62,7 @@ func Command(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
 		},
 	})
 
-	parsedArguments := util.ParseArguments([]string{"name"}, interaction)
+	parsedArguments := util.ParseArguments([]string{"name"}, interaction.ApplicationCommandData().Options)
 	if parsedArguments["Name"] == "" {
 		parsedArguments["Name"] = "all"
 	}

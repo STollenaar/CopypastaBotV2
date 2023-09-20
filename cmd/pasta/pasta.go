@@ -29,7 +29,7 @@ func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 	fmt.Println(parsedArguments)
 	response := util.ResponseObject{
 		Data: discordgo.InteractionResponseData{
-			Content: fmt.Sprintln("Something went wrong"),
+			Content: fmt.Sprintln("something went wrong"),
 		},
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 	}

@@ -12,9 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/stollenaar/copypastabotv2/cmd/markov"
-	markovCommand "github.com/stollenaar/copypastabotv2/cmd/markov"
 	"github.com/stollenaar/copypastabotv2/internal/util"
+	markovCommand "github.com/stollenaar/copypastabotv2/pkg/markov"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -101,7 +100,7 @@ func Command(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
 
 	var markov string
 
-	parsedArguments := util.ParseArguments([]string{"url", "user", "redditpost"}, interaction)
+	parsedArguments := util.ParseArguments([]string{"url", "user", "redditpost"}, interaction.ApplicationCommandData().Options)
 
 	if url, ok := parsedArguments["Url"]; ok {
 		markov, err = markovCommand.GetMarkovURL(url)
@@ -127,7 +126,7 @@ func Command(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
 		return
 	}
 	if err != nil {
-		ERROR_CALLED := "Something went wrong trying to create the Markov!!"
+		ERROR_CALLED := "something went wrong trying to create the Markov!!"
 		Bot.InteractionResponseEdit(interaction.Interaction, &discordgo.WebhookEdit{
 			Content: &ERROR_CALLED,
 		})
@@ -264,7 +263,7 @@ func VCInterupt(bot *discordgo.Session) {
 				user = strings.ReplaceAll(user, ">", "")
 				user = strings.ReplaceAll(user, "@", "")
 
-				markov, err := markov.GetUserMarkov(guild, user)
+				markov, err := markovCommand.GetUserMarkov(guild, user)
 				if err != nil {
 					fmt.Println(err)
 					continue
