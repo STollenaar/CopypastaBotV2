@@ -21,11 +21,16 @@ var (
 )
 
 func init() {
+	clientId, _ := ConfigFile.GetRedditClientID()
+	secret, _ := ConfigFile.GetRedditClientSecret()
+	username, _ := ConfigFile.GetRedditUsername()
+	password, _ := ConfigFile.GetRedditPassword()
+
 	r, err := reddit.NewClient(reddit.Credentials{
-		ID:       ConfigFile.GetRedditClientID(),
-		Secret:   ConfigFile.GetRedditClientSecret(),
-		Username: ConfigFile.GetRedditUsername(),
-		Password: ConfigFile.GetRedditPassword(),
+		ID:       clientId,
+		Secret:   secret,
+		Username: username,
+		Password: password,
 	})
 	if err != nil {
 		log.Fatalln(fmt.Errorf("failure initializing reddit client %w", err))

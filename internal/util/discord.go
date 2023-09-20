@@ -44,7 +44,12 @@ func IsVerified(body, signature, timestamp string) bool {
 		fmt.Println(fmt.Errorf("error decoding signature %w", err))
 		return false
 	}
-	decodedKey, err := hex.DecodeString(ConfigFile.GetPublicDiscordToken())
+	publicToken, err := ConfigFile.GetPublicDiscordToken()
+	if err != nil {
+		fmt.Println(fmt.Errorf("error fetching public key %w", err))
+		return false
+	}
+	decodedKey, err := hex.DecodeString(publicToken)
 	if err != nil {
 		fmt.Println(fmt.Errorf("error decoding public key %w", err))
 		return false

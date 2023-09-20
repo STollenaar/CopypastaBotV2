@@ -71,28 +71,6 @@ func init() {
 	if ConfigFile.TERMINAL_REGEX == "" {
 		ConfigFile.TERMINAL_REGEX = `(\.|,|:|;|\?|!)$`
 	}
-
-	if ConfigFile.DISCORD_TOKEN == "" && ConfigFile.AWS_PARAMETER_DISCORD_TOKEN == "" {
-		err = fmt.Errorf("DISCORD_TOKEN or AWS_PARAMETER_DISCORD_TOKEN is not set. %w", err)
-	}
-	if ConfigFile.AWS_PARAMETER_PUBLIC_DISCORD_TOKEN == "" {
-		err = fmt.Errorf("AWS_PARAMETER_PUBLIC_DISCORD_TOKEN is not set. %w", err)
-	}
-	if ConfigFile.AWS_PARAMETER_REDDIT_CLIENT_ID == "" && ConfigFile.REDDIT_CLIENT_ID == "" {
-		err = fmt.Errorf("REDDIT_CLIENT_ID or AWS_PARAMETER_REDDIT_CLIENT_ID if not set. %w", err)
-	}
-	if ConfigFile.AWS_PARAMETER_REDDIT_USERNAME == "" && ConfigFile.REDDIT_USERNAME == "" {
-		err = fmt.Errorf("REDDIT_USERNAME or AWS_PARAMETER_REDDIT_USERNAME if not set. %w", err)
-	}
-	if ConfigFile.AWS_PARAMETER_REDDIT_CLIENT_SECRET == "" && ConfigFile.REDDIT_CLIENT_SECRET == "" {
-		err = fmt.Errorf("REDDIT_CLIENT_SECRET or REDDIT_CLIENT_SECRET if not set. %w", err)
-	}
-	if ConfigFile.AWS_PARAMETER_REDDIT_PASSWORD == "" && ConfigFile.REDDIT_PASSWORD == "" {
-		err = fmt.Errorf("AWS_PARAMETER_REDDIT_PASSWORD or REDDIT_PASSWORD if not set. %w", err)
-	}
-	if err != nil {
-		log.Fatal(err)
-	}
 }
 
 func init() {
@@ -107,49 +85,70 @@ func init() {
 	ssmClient = ssm.NewFromConfig(cfg)
 }
 
-func (c *Config) GetDiscordToken() string {
+func (c *Config) GetDiscordToken() (string, error) {
+	if c.DISCORD_TOKEN == "" && c.AWS_PARAMETER_DISCORD_TOKEN == "" {
+		log.Fatal("DISCORD_TOKEN or AWS_PARAMETER_DISCORD_TOKEN is not set.")
+	}
+
 	if c.DISCORD_TOKEN != "" {
-		return c.DISCORD_TOKEN
+		return c.DISCORD_TOKEN, nil
 	}
 	return getAWSParameter(c.AWS_PARAMETER_DISCORD_TOKEN)
 }
 
-func (c *Config) GetPublicDiscordToken() string {
-	if c.DISCORD_TOKEN != "" {
-		return c.DISCORD_TOKEN
+func (c *Config) GetPublicDiscordToken() (string, error) {
+	if c.AWS_PARAMETER_PUBLIC_DISCORD_TOKEN == "" {
+		log.Fatal("AWS_PARAMETER_PUBLIC_DISCORD_TOKEN is not set.")
 	}
+
 	return getAWSParameter(c.AWS_PARAMETER_PUBLIC_DISCORD_TOKEN)
 }
 
-func (c *Config) GetRedditUsername() string {
+func (c *Config) GetRedditUsername() (string, error) {
+	if ConfigFile.AWS_PARAMETER_REDDIT_USERNAME == "" && ConfigFile.REDDIT_USERNAME == "" {
+		log.Fatal("REDDIT_USERNAME or AWS_PARAMETER_REDDIT_USERNAME if not set.")
+	}
+
 	if c.REDDIT_USERNAME != "" {
-		return c.REDDIT_USERNAME
+		return c.REDDIT_USERNAME, nil
 	}
 	return getAWSParameter(c.AWS_PARAMETER_REDDIT_USERNAME)
 }
 
-func (c *Config) GetRedditPassword() string {
+func (c *Config) GetRedditPassword() (string, error) {
+	if ConfigFile.AWS_PARAMETER_REDDIT_PASSWORD == "" && ConfigFile.REDDIT_PASSWORD == "" {
+		log.Fatal("AWS_PARAMETER_REDDIT_PASSWORD or REDDIT_PASSWORD if not set.")
+	}
+
 	if c.REDDIT_PASSWORD != "" {
-		return c.REDDIT_PASSWORD
+		return c.REDDIT_PASSWORD, nil
 	}
 	return getAWSParameter(c.AWS_PARAMETER_REDDIT_PASSWORD)
 }
 
-func (c *Config) GetRedditClientID() string {
+func (c *Config) GetRedditClientID() (string, error) {
+	if ConfigFile.AWS_PARAMETER_REDDIT_CLIENT_ID == "" && ConfigFile.REDDIT_CLIENT_ID == "" {
+		log.Fatal("REDDIT_CLIENT_ID or AWS_PARAMETER_REDDIT_CLIENT_ID if not set.")
+	}
+
 	if c.REDDIT_CLIENT_ID != "" {
-		return c.REDDIT_CLIENT_ID
+		return c.REDDIT_CLIENT_ID, nil
 	}
 	return getAWSParameter(c.AWS_PARAMETER_REDDIT_CLIENT_ID)
 }
 
-func (c *Config) GetRedditClientSecret() string {
+func (c *Config) GetRedditClientSecret() (string, error) {
+	if ConfigFile.AWS_PARAMETER_REDDIT_CLIENT_SECRET == "" && ConfigFile.REDDIT_CLIENT_SECRET == "" {
+		log.Fatal("REDDIT_CLIENT_SECRET or REDDIT_CLIENT_SECRET if not set.")
+	}
+
 	if c.REDDIT_CLIENT_SECRET != "" {
-		return c.REDDIT_CLIENT_SECRET
+		return c.REDDIT_CLIENT_SECRET, nil
 	}
 	return getAWSParameter(c.AWS_PARAMETER_REDDIT_CLIENT_SECRET)
 }
 
-func getAWSParameter(parameterName string) string {
+func getAWSParameter(parameterName string) (string, error) {
 	out, err := ssmClient.GetParameter(context.TODO(), &ssm.GetParameterInput{
 		Name:           aws.String(parameterName),
 		WithDecryption: aws.Bool(true),
@@ -157,5 +156,5 @@ func getAWSParameter(parameterName string) string {
 	if err != nil {
 		fmt.Println(fmt.Errorf("error from fetching parameter %s. With error: %w", parameterName, err))
 	}
-	return *out.Parameter.Value
+	return *out.Parameter.Value, err
 }
