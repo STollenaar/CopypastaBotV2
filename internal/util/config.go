@@ -152,7 +152,7 @@ func (c *Config) GetRedditClientSecret() string {
 func getAWSParameter(parameterName string) string {
 	out, err := ssmClient.GetParameter(context.TODO(), &ssm.GetParameterInput{
 		Name:           aws.String(parameterName),
-		WithDecryption: true,
+		WithDecryption: aws.Bool(true),
 	})
 	if err != nil {
 		fmt.Println(fmt.Errorf("error from fetching parameter %s. With error: %w", parameterName, err))

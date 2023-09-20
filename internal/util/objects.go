@@ -16,12 +16,3 @@ type ResponseObject struct {
 	Data discordgo.InteractionResponseData `json:"data"`
 	Type discordgo.InteractionResponseType `json:"type"`
 }
-
-type SQSObject struct {
-	Type          string `json:"type"`
-	Command       string `json:"command"`
-	Data          string `json:"data"`
-	GuildID       string `json:"guildID"`
-	Token         string `json:"token"`
-	ApplicationID string `json:"applicationID"`
-}
