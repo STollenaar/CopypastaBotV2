@@ -21,6 +21,11 @@ var (
 )
 
 func init() {
+	images = []string{".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".gif"}
+	videos = []string{"youtube", "gfycat", "youtu"}
+}
+
+func createRedditClient(){
 	clientId, _ := ConfigFile.GetRedditClientID()
 	secret, _ := ConfigFile.GetRedditClientSecret()
 	username, _ := ConfigFile.GetRedditUsername()
@@ -36,9 +41,6 @@ func init() {
 		log.Fatalln(fmt.Errorf("failure initializing reddit client %w", err))
 	}
 	redditClient = r
-
-	images = []string{".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".gif"}
-	videos = []string{"youtube", "gfycat", "youtu"}
 }
 
 func IsTerminalWord(word string) bool {
@@ -51,7 +53,7 @@ func IsTerminalWord(word string) bool {
 
 func DisplayRedditSubreddit(subreddit string) []*reddit.Post {
 	if redditClient == nil {
-		redditClient, _ = reddit.NewReadonlyClient()
+		createRedditClient()
 	}
 	posts, _, err := redditClient.Subreddit.HotPosts(context.TODO(), subreddit, &reddit.ListOptions{})
 	if err != nil {
@@ -62,6 +64,9 @@ func DisplayRedditSubreddit(subreddit string) []*reddit.Post {
 }
 
 func GetRedditPost(redditPostID string) *reddit.PostAndComments {
+	if redditClient == nil {
+		createRedditClient()
+	}
 	postCommnents, _, err := redditClient.Post.Get(context.TODO(), redditPostID)
 	if err != nil {
 		fmt.Println(fmt.Errorf("error fetching from reddit with error: %w", err))
