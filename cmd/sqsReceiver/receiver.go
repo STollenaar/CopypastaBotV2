@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/bwmarrin/discordgo"
 	"github.com/stollenaar/copypastabotv2/internal/util"
+	"github.com/stollenaar/copypastabotv2/pkg/markov"
 	statsUtil "github.com/stollenaar/statisticsbot/util"
 )
 
@@ -25,22 +26,54 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 		fmt.Println(err)
 		return err
 	}
-	response := util.ResponseObject{
-		Data: discordgo.InteractionResponseData{
-			Content: sqsObject.Data,
-		},
-		Type: discordgo.InteractionResponseDeferredMessageUpdate,
+
+	var markovData string
+
+	switch sqsObject.Type {
+	case "url":
+		markovData = handleURL(sqsObject.Data)
+	case "user":
+		markovData = handleUser(sqsObject.Data)
+	default:
+		return errors.New("unimplemented type")
 	}
 
-	data, err := json.Marshal(response)
+	switch sqsObject.Command {
+	case "markov":
+		response := util.ResponseObject{
+			Data: discordgo.InteractionResponseData{
+				Content: markovData,
+			},
+			Type: discordgo.InteractionResponseDeferredMessageUpdate,
+		}
+
+		data, err := json.Marshal(response)
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
+		return util.SendRequest("PATCH", sqsObject.ApplicationID, sqsObject.Token, data)
+	case "speak":
+	default:
+		return errors.New("unimplemented command")
+	}
+	return errors.New("how did we get here?")
+}
+
+func handleURL(input string) string {
+	data, err := markov.GetMarkovURL(input)
 	if err != nil {
 		fmt.Println(err)
-		return err
+		return err.Error()
 	}
+	return data
+}
 
-	if sqsObject.Command == "markov" {
-		return util.SendRequest("PATCH", sqsObject.ApplicationID, sqsObject.Token, data)
-	} else {
-		return errors.New("unimplemented route")
+func handleUser(input string) string {
+	data, err := markov.GetUserMarkov(input)
+	if err != nil {
+		fmt.Println(err)
+		return err.Error()
 	}
+	return data
 }
