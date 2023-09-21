@@ -3,7 +3,7 @@ package markov
 import (
 	"bytes"
 	"errors"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"strings"
@@ -35,7 +35,7 @@ func (m *markov) ReadFile(filePath string) string {
 	}
 
 	// Read data from the file
-	text, err := ioutil.ReadAll(file)
+	text, err := io.ReadAll(file)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -58,7 +58,7 @@ func (m *markov) ReadURL(URL string) (string, error) {
 		m.parse(text)
 	})
 	if len(m.states) < 10 {
-		return "", errors.New("Article from URL couldn't be parsed")
+		return "", errors.New("article from URL couldn't be parsed")
 	}
 
 	return m.generate(), nil
@@ -80,11 +80,7 @@ func (m *markov) parse(text string) {
 		prefix := [2]string{words[i], words[i+1]}
 
 		// Assign the third word as value to the prefix
-		if _, ok := m.states[prefix]; ok {
-			m.states[prefix] = append(m.states[prefix], words[i+2])
-		} else {
-			m.states[prefix] = []string{words[i+2]}
-		}
+		m.states[prefix] = append(m.states[prefix], words[i+2])
 	}
 }
 
