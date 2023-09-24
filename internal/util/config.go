@@ -54,6 +54,7 @@ func init() {
 	ConfigFile = &Config{
 		DISCORD_TOKEN:                      os.Getenv("DISCORD_TOKEN"),
 		AWS_REGION:                         os.Getenv("AWS_REGION"),
+		AWS_SQS_URL:                        os.Getenv("AWS_SQS_URL"),
 		AWS_PARAMETER_DISCORD_TOKEN:        os.Getenv("AWS_PARAMETER_DISCORD_TOKEN"),
 		AWS_PARAMETER_PUBLIC_DISCORD_TOKEN: os.Getenv("AWS_PARAMETER_PUBLIC_DISCORD_TOKEN"),
 		AWS_PARAMETER_REDDIT_USERNAME:      os.Getenv("AWS_PARAMETER_REDDIT_USERNAME"),
