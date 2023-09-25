@@ -8,8 +8,8 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.18.40
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.24.5
 	github.com/bwmarrin/discordgo v0.27.1
-	github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20230920185821-90c4a0c9f4f7
-	github.com/stollenaar/statisticsbot/util v0.0.0-20230920184726-87f6ee62bd2e
+	github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20230924150725-bbdf152a1528
+	github.com/stollenaar/statisticsbot/util v0.0.0-20230924143446-b8273375c638
 )
 
 require (

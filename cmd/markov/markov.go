@@ -70,10 +70,13 @@ func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 	}
 
 	sqsMessageData, _ := json.Marshal(sqsMessage)
-	sqsClient.SendMessage(context.TODO(), &sqs.SendMessageInput{
+	_, err := sqsClient.SendMessage(context.TODO(), &sqs.SendMessageInput{
 		MessageBody: aws.String(string(sqsMessageData)),
 		QueueUrl:    aws.String(util.ConfigFile.AWS_SQS_URL),
 	})
+	if err != nil {
+		fmt.Println(err)
+	}
 
 	data, _ := json.Marshal(response)
 	fmt.Printf("Responding with %s\n", string(data))
