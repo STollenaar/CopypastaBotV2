@@ -5,8 +5,9 @@ go 1.20
 require (
 	github.com/aws/aws-lambda-go v1.41.0
 	github.com/bwmarrin/discordgo v0.27.1
-	github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20230920185821-90c4a0c9f4f7
-	github.com/stollenaar/statisticsbot/util v0.0.0-20230920184726-87f6ee62bd2e
+	github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20230925010751-24c18ab065fc
+	github.com/stollenaar/copypastabotv2/pkg/markov v0.0.0-20230921225706-a9f4b360581c
+	github.com/stollenaar/statisticsbot/util v0.0.0-20230924143446-b8273375c638
 )
 
 require (
@@ -32,7 +33,6 @@ require (
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/klauspost/compress v1.17.0 // indirect
-	github.com/stollenaar/copypastabotv2/pkg/markov v0.0.0-20230921225706-a9f4b360581c // indirect
 	github.com/vartanbeno/go-reddit/v2 v2.0.1 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a // indirect
 	go.mongodb.org/mongo-driver v1.12.1 // indirect

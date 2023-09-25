@@ -40,11 +40,8 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 
 	switch sqsObject.Command {
 	case "markov":
-		response := util.ResponseObject{
-			Data: discordgo.InteractionResponseData{
-				Content: markovData,
-			},
-			Type: discordgo.InteractionResponseDeferredMessageUpdate,
+		response := discordgo.WebhookEdit{
+			Content: &markovData,
 		}
 
 		data, err := json.Marshal(response)
