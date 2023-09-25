@@ -48,10 +48,10 @@ resource "aws_apigatewayv2_deployment" "deployment" {
 }
 
 resource "aws_apigatewayv2_stage" "stage" {
-  depends_on    = [aws_iam_role.cloudwatch, aws_api_gateway_account.gateway_account]
-  api_id        = aws_apigatewayv2_api.api_gateway.id
-  name          = "production"
-  auto_deploy   = true
+  depends_on  = [aws_iam_role.cloudwatch, aws_api_gateway_account.gateway_account]
+  api_id      = aws_apigatewayv2_api.api_gateway.id
+  name        = "production"
+  auto_deploy = true
 
   access_log_settings {
     destination_arn = aws_cloudwatch_log_group.api_gateway_log_group.arn
@@ -60,10 +60,9 @@ resource "aws_apigatewayv2_stage" "stage" {
 }
 
 resource "aws_lambda_permission" "api_gateway_lambda_invocation" {
-  for_each      = module.lambda_functions.lambda_functions
   statement_id  = "AllowExecutionFromAPIGateway"
   action        = "lambda:InvokeFunction"
-  function_name = each.key
+  function_name = module.lambda_functions.lambda_functions["router"].function_name
   principal     = "apigateway.amazonaws.com"
 
   source_arn = "${aws_apigatewayv2_api.api_gateway.execution_arn}/*/*/event"

@@ -7,9 +7,22 @@ data "terraform_remote_state" "discord_bots_cluster" {
     key     = "infrastructure/terraform.tfstate"
   }
 }
+
+data "terraform_remote_state" "statisticsbot" {
+  backend = "s3"
+  config = {
+    profile = local.used_profile.name
+    region  = "ca-central-1"
+    bucket  = "stollenaar-terraform-states"
+    key     = "discordbots/statisticsBot.tfstate"
+  }
+}
+
 data "awsprofiler_list" "list_profiles" {}
 
 data "aws_region" "current" {}
+
+data "aws_caller_identity" "current" {}
 
 # IAM policy document for the Lambda to access the parameter store
 data "aws_iam_policy_document" "lambda_execution_role_policy_document" {
@@ -38,6 +51,27 @@ data "aws_iam_policy_document" "lambda_execution_role_policy_document" {
     resources = ["*"]
   }
 }
+
+# IAM policy document for the container to access the sqs queue
+data "aws_iam_policy_document" "sqs_role_policy_document" {
+  statement {
+    sid    = "SQSSendMessage"
+    effect = "Allow"
+    actions = [
+      "sqs:DeleteMessage",
+      "sqs:GetQueueAttributes",
+      "sqs:GetQueueUrl",
+      "sqs:ReceiveMessage",
+      "sqs:SendMessage",
+    ]
+    resources = [
+      data.terraform_remote_state.statisticsbot.outputs.sqs.request.arn,
+      data.terraform_remote_state.statisticsbot.outputs.sqs.response.arn,
+    ]
+  }
+}
+
+
 # IAM policy document for the Lambda to access the parameter store
 data "aws_iam_policy_document" "lambda_execution_invocation_document" {
   statement {
@@ -48,7 +82,7 @@ data "aws_iam_policy_document" "lambda_execution_invocation_document" {
       "lambda:InvokeAsync",
     ]
     resources = [
-      "arn:aws:lambda:*:405934267152:function:*",
+      "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:*",
     ]
   }
 }
