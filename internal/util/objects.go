@@ -16,3 +16,8 @@ type ResponseObject struct {
 	Data discordgo.InteractionResponseData `json:"data"`
 	Type discordgo.InteractionResponseType `json:"type"`
 }
+
+type EditResponseObject struct {
+	Data discordgo.WebhookEdit             `json:"data"`
+	Type discordgo.InteractionResponseType `json:"type"`
+}

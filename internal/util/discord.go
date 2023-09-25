@@ -29,11 +29,13 @@ func SendRequest(method, interactionID, interactionToken string, data []byte) er
 		return err
 	}
 	client := &http.Client{}
-	_, err = client.Do(req)
+	fmt.Println(*req)
+	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Println(err)
 		return err
 	}
+	fmt.Println(*resp)
 	return nil
 }
 
