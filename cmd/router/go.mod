@@ -8,7 +8,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.18.40
 	github.com/aws/aws-sdk-go-v2/service/lambda v1.39.5
 	github.com/bwmarrin/discordgo v0.27.1
-	github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20230920185821-90c4a0c9f4f7
+	github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20230921231547-d6de30e404cf
 )
 
 require (

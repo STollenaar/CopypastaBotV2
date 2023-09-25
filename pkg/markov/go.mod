@@ -2,7 +2,7 @@ module github.com/stollenaar/copypastabotv2/pkg/markov
 
 go 1.18
 
-require github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20230920185821-90c4a0c9f4f7
+require github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20230921231547-d6de30e404cf
 
 require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.13.38 // indirect
