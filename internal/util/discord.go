@@ -35,7 +35,12 @@ func SendRequest(method, interactionID, interactionToken string, data []byte) er
 		fmt.Println(err)
 		return err
 	}
-	fmt.Println(*resp)
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(resp.Body)
+	bodyData := buf.String()
+
+	bodyString := string(bodyData)
+	fmt.Println(resp, bodyString)
 	return nil
 }
 
