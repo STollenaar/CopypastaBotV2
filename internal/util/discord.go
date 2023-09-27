@@ -10,10 +10,13 @@ import (
 
 const (
 	POST_URL  = "https://discord.com/api/v10/interactions/%s/%s/callback"
-	PATCH_URL = "https://discord.com/api/v10/webhooks/%s/%s/messages/@original"
+	PATCH_URL = "https://discord.com/api/v10/webhooks/%s/%s/messages/%s"
 )
 
-func SendRequest(method, interactionID, interactionToken string, data []byte) error {
+func SendRequest(method, interactionID, interactionToken string, data []byte, messageID ...string) error {
+	if len(messageID) == 0 {
+		messageID = append(messageID, "@original")
+	}
 	// Create a HTTP post request
 	var req *http.Request
 	var err error
@@ -21,7 +24,7 @@ func SendRequest(method, interactionID, interactionToken string, data []byte) er
 	case "POST":
 		req, err = http.NewRequest("POST", fmt.Sprintf(POST_URL, interactionID, interactionToken), bytes.NewBuffer(data))
 	case "PATCH":
-		req, err = http.NewRequest("PATCH", fmt.Sprintf(PATCH_URL, interactionID, interactionToken), bytes.NewBuffer(data))
+		req, err = http.NewRequest("PATCH", fmt.Sprintf(PATCH_URL, interactionID, interactionToken, messageID[0]), bytes.NewBuffer(data))
 	}
 	req.Header.Add("Content-Type", "application/json")
 	if err != nil {
