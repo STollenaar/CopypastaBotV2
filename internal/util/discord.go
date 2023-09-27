@@ -9,8 +9,9 @@ import (
 )
 
 const (
-	POST_URL  = "https://discord.com/api/v10/interactions/%s/%s/callback"
-	PATCH_URL = "https://discord.com/api/v10/webhooks/%s/%s/messages/%s"
+	POST_URL         = "https://discord.com/api/v10/interactions/%s/%s/callback"
+	WEBHOOK_POST_URL = "https://discord.com/api/v10/webhooks/%s/%s"
+	PATCH_URL        = "https://discord.com/api/v10/webhooks/%s/%s/messages/%s"
 )
 
 func SendRequest(method, interactionID, interactionToken string, data []byte, messageID ...string) error {
@@ -25,6 +26,8 @@ func SendRequest(method, interactionID, interactionToken string, data []byte, me
 		req, err = http.NewRequest("POST", fmt.Sprintf(POST_URL, interactionID, interactionToken), bytes.NewBuffer(data))
 	case "PATCH":
 		req, err = http.NewRequest("PATCH", fmt.Sprintf(PATCH_URL, interactionID, interactionToken, messageID[0]), bytes.NewBuffer(data))
+	case "WEBHOOK_POST":
+		req, err = http.NewRequest("POST", fmt.Sprintf(WEBHOOK_POST_URL, interactionID, interactionToken), bytes.NewBuffer(data))
 	}
 	req.Header.Add("Content-Type", "application/json")
 	if err != nil {
