@@ -70,6 +70,40 @@ data "aws_iam_policy_document" "sqs_role_policy_document" {
     ]
   }
 }
+# IAM policy document for the container to access the sqs queue
+data "aws_iam_policy_document" "browse_sqs_role_policy_document" {
+  statement {
+    sid    = "SQSSendMessage"
+    effect = "Allow"
+    actions = [
+      "sqs:DeleteMessage",
+      "sqs:GetQueueAttributes",
+      "sqs:GetQueueUrl",
+      "sqs:ReceiveMessage",
+      "sqs:SendMessage",
+    ]
+    resources = [
+      aws_sqs_queue.browse_request.arn
+    ]
+  }
+}
+# IAM policy document for the container to access the sqs queue
+data "aws_iam_policy_document" "browse_update_sqs_role_policy_document" {
+  statement {
+    sid    = "SQSSendMessage"
+    effect = "Allow"
+    actions = [
+      "sqs:DeleteMessage",
+      "sqs:GetQueueAttributes",
+      "sqs:GetQueueUrl",
+      "sqs:ReceiveMessage",
+      "sqs:SendMessage",
+    ]
+    resources = [
+      aws_sqs_queue.browse_update.arn
+    ]
+  }
+}
 
 
 # IAM policy document for the Lambda to access the parameter store
