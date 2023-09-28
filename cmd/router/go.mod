@@ -7,8 +7,10 @@ require (
 	github.com/aws/aws-sdk-go v1.45.11
 	github.com/aws/aws-sdk-go-v2/config v1.18.40
 	github.com/aws/aws-sdk-go-v2/service/lambda v1.39.5
+	github.com/aws/aws-sdk-go-v2/service/sqs v1.24.5
 	github.com/bwmarrin/discordgo v0.27.1
-	github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20230921231547-d6de30e404cf
+	github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20230927020811-925625d04223
+	github.com/stollenaar/statisticsbot/util v0.0.0-20230926020424-6c2671243e9a
 )
 
 require (
@@ -26,14 +28,19 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sts v1.22.0 // indirect
 	github.com/aws/smithy-go v1.14.2 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
+	github.com/golang/snappy v0.0.1 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
+	github.com/klauspost/compress v1.13.6 // indirect
 	github.com/vartanbeno/go-reddit/v2 v2.0.1 // indirect
+	github.com/youmark/pkcs8 v0.0.0-20181117223130-1be2e3e5546d // indirect
+	go.mongodb.org/mongo-driver v1.12.1 // indirect
 	golang.org/x/crypto v0.13.0 // indirect
 	golang.org/x/net v0.15.0 // indirect
 	golang.org/x/oauth2 v0.12.0 // indirect
+	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4 // indirect
 	golang.org/x/sys v0.12.0 // indirect
 	golang.org/x/text v0.13.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect

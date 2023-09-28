@@ -11,13 +11,16 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/config"
 	lambdaService "github.com/aws/aws-sdk-go-v2/service/lambda"
+	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/bwmarrin/discordgo"
 	"github.com/stollenaar/copypastabotv2/internal/util"
+	statsUtil "github.com/stollenaar/statisticsbot/util"
 )
 
 var (
 	lambdaClient *lambdaService.Client
+	sqsClient    *sqs.Client
 )
 
 func init() {
@@ -28,6 +31,7 @@ func init() {
 		log.Fatal("Error loading AWS config:", err)
 	}
 	lambdaClient = lambdaService.NewFromConfig(cfg)
+	sqsClient = sqs.NewFromConfig(cfg)
 }
 
 func main() {
@@ -47,90 +51,94 @@ func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 	}
 
 	var interaction discordgo.Interaction
+	var response discordgo.InteractionResponse
+	apiResponse := events.APIGatewayProxyResponse{
+		StatusCode: http.StatusOK,
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
+	}
 
 	json.Unmarshal([]byte(req.Body), &interaction)
 
 	if interaction.Type == discordgo.InteractionType(discordgo.InteractionResponsePong) {
-		response := util.ResponseObject{
-			Type: discordgo.InteractionResponsePong,
+		response.Type = discordgo.InteractionResponsePong
+	} else if interaction.Type == discordgo.InteractionMessageComponent {
+		response.Type = discordgo.InteractionResponseDeferredMessageUpdate
+
+		sqsMessage := statsUtil.SQSObject{
+			Token:         interaction.Token,
+			Command:       "browse",
+			GuildID:       interaction.GuildID,
+			ApplicationID: interaction.AppID,
+			Data:          interaction.MessageComponentData().CustomID,
 		}
-		data, _ := json.Marshal(response)
-		return events.APIGatewayProxyResponse{
-			StatusCode: http.StatusOK,
-			Headers: map[string]string{
-				"Content-Type": "application/json",
-			},
-			Body: string(data),
-		}, nil
+		sqsMessageData, _ := json.Marshal(sqsMessage)
+		_, err := sqsClient.SendMessage(context.TODO(), &sqs.SendMessageInput{
+			MessageBody:  aws.String(string(sqsMessageData)),
+			QueueUrl:     aws.String(util.ConfigFile.AWS_SQS_URL),
+			DelaySeconds: *aws.Int32(2),
+		})
+		if err != nil {
+			fmt.Println(err)
+		}
+	} else {
+		// Routing the commands to the correctly lambda that will handle it
+		switch interaction.ApplicationCommandData().Name {
+		case "ping":
+			out, err := lambdaClient.Invoke(context.TODO(), &lambdaService.InvokeInput{
+				FunctionName: aws.String("ping"),
+				Payload:      d,
+			})
+			if err != nil {
+				apiResponse.Body = err.Error()
+			} else {
+				json.Unmarshal(out.Payload, &apiResponse)
+			}
+		case "pasta":
+			out, err := lambdaClient.Invoke(context.TODO(), &lambdaService.InvokeInput{
+				FunctionName: aws.String("pasta"),
+				Payload:      d,
+			})
+			if err != nil {
+				apiResponse.Body = err.Error()
+			} else {
+				json.Unmarshal(out.Payload, &apiResponse)
+			}
+		case "markov":
+			out, err := lambdaClient.Invoke(context.TODO(), &lambdaService.InvokeInput{
+				FunctionName: aws.String("markov"),
+				Payload:      d,
+			})
+			if err != nil {
+				apiResponse.Body = err.Error()
+			} else {
+				json.Unmarshal(out.Payload, &apiResponse)
+			}
+		case "browse":
+			out, err := lambdaClient.Invoke(context.TODO(), &lambdaService.InvokeInput{
+				FunctionName: aws.String("browse"),
+				Payload:      d,
+			})
+			if err != nil {
+				apiResponse.Body = err.Error()
+			} else {
+				json.Unmarshal(out.Payload, &apiResponse)
+			}
+		default:
+			response = discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: "Unknown command.. How did you even get here?",
+				},
+			}
+		}
 	}
 
-	// Routing the commands to the correctly lambda that will handle it
-	switch interaction.ApplicationCommandData().Name {
-	case "ping":
-		out, err := lambdaClient.Invoke(context.TODO(), &lambdaService.InvokeInput{
-			FunctionName: aws.String("ping"),
-			Payload:      d,
-		})
-		if err != nil {
-			return events.APIGatewayProxyResponse{
-				StatusCode: http.StatusInternalServerError,
-				Headers: map[string]string{
-					"Content-Type": "application/json",
-				},
-				Body: err.Error(),
-			}, nil
-		}
-		var response events.APIGatewayProxyResponse
-		json.Unmarshal(out.Payload, &response)
-		return response, nil
-	case "pasta":
-		out, err := lambdaClient.Invoke(context.TODO(), &lambdaService.InvokeInput{
-			FunctionName: aws.String("pasta"),
-			Payload:      d,
-		})
-		if err != nil {
-			return events.APIGatewayProxyResponse{
-				StatusCode: http.StatusInternalServerError,
-				Headers: map[string]string{
-					"Content-Type": "application/json",
-				},
-				Body: err.Error(),
-			}, nil
-		}
-		var response events.APIGatewayProxyResponse
-		json.Unmarshal(out.Payload, &response)
-		return response, nil
-	case "markov":
-		out, err := lambdaClient.Invoke(context.TODO(), &lambdaService.InvokeInput{
-			FunctionName: aws.String("markov"),
-			Payload:      d,
-		})
-		if err != nil {
-			return events.APIGatewayProxyResponse{
-				StatusCode: http.StatusInternalServerError,
-				Headers: map[string]string{
-					"Content-Type": "application/json",
-				},
-				Body: err.Error(),
-			}, nil
-		}
-		var response events.APIGatewayProxyResponse
-		json.Unmarshal(out.Payload, &response)
-		return response, nil
-	default:
-		response := util.ResponseObject{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: discordgo.InteractionResponseData{
-				Content: "Unknown command.. How did you even get here?",
-			},
-		}
+	if apiResponse.Body == "" {
 		data, _ := json.Marshal(response)
-		return events.APIGatewayProxyResponse{
-			StatusCode: http.StatusOK,
-			Headers: map[string]string{
-				"Content-Type": "application/json",
-			},
-			Body: string(data),
-		}, nil
+		apiResponse.Body = string(data)
 	}
+	fmt.Printf("APIResponse: %v\n", apiResponse)
+	return apiResponse, nil
 }
