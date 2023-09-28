@@ -62,20 +62,6 @@ locals {
         AWS_PARAMETER_REDDIT_CLIENT_SECRET = "/reddit/client_secret"
       }
     }
-    browseUpdate = {
-      description       = "browseUpdate handler for CopypastaBot"
-      enable_alarm      = false
-      runtime           = "provided.al2"
-      handler           = "bootstrap"
-      timeout           = 60 * 2
-      extra_permissions = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.browse_update_sqs_role_policy_document.json]
-      environment_variables = {
-        AWS_PARAMETER_REDDIT_USERNAME      = "/reddit/username"
-        AWS_PARAMETER_REDDIT_PASSWORD      = "/reddit/password"
-        AWS_PARAMETER_REDDIT_CLIENT_ID     = "/reddit/client_id"
-        AWS_PARAMETER_REDDIT_CLIENT_SECRET = "/reddit/client_secret"
-      }
-    }
     markov = {
       description       = "Markov command for CopypastaBot"
       enable_alarm      = false
@@ -125,10 +111,10 @@ locals {
       runtime           = "provided.al2"
       handler           = "bootstrap"
       timeout           = 60 * 2
-      extra_permissions = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.lambda_execution_invocation_document.json, data.aws_iam_policy_document.browse_update_sqs_role_policy_document.json]
+      extra_permissions = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.lambda_execution_invocation_document.json, data.aws_iam_policy_document.browse_sqs_role_policy_document.json]
       environment_variables = {
         AWS_PARAMETER_PUBLIC_DISCORD_TOKEN = "/discord_tokens/${local.name}_public",
-        AWS_SQS_URL                        = aws_sqs_queue.browse_update.url
+        AWS_SQS_URL                        = aws_sqs_queue.browse_request.url
       }
     }
     speak = {

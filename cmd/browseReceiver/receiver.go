@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -25,14 +26,16 @@ func (b *browserTracker) Marshal() string {
 	return fmt.Sprintf("%s|%d|%s", b.SubReddit, b.Page, b.Action)
 }
 
-func (b *browserTracker) Unmarshal(data []byte) browserTracker {
+func (b *browserTracker) Unmarshal(data []byte) error {
 	d := strings.Split(string(data), "|")
-	page, _ := strconv.Atoi(d[1])
-	return browserTracker{
-		SubReddit: d[0],
-		Page:      page,
-		Action:    d[2],
+	if len(d) != 3 {
+		return errors.New("unknown data format")
 	}
+	page, _ := strconv.Atoi(d[1])
+	b.SubReddit = d[0]
+	b.Page = page
+	b.Action = d[2]
+	return nil
 }
 
 func main() {
@@ -47,13 +50,23 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 		return err
 	}
 
+	var browser browserTracker
+	err = browser.Unmarshal([]byte(sqsObject.Data))
+	if err != nil {
+		browser = browserTracker{
+			SubReddit: sqsObject.Data,
+			Page:      0,
+			Action:    "",
+		}
+	}
+
 	// userID := interaction.Member.User.ID
-	posts := util.DisplayRedditSubreddit(sqsObject.Data)
-	embed := util.DisplayRedditPost(posts[0].ID, true)[0]
+	posts := util.DisplayRedditSubreddit(browser.SubReddit)
+	embed := util.DisplayRedditPost(posts[browser.Page].ID, true)[0]
 
 	response := discordgo.InteractionResponseData{
 		Embeds:     []*discordgo.MessageEmbed{embed},
-		Components: getActionRow(0, sqsObject.Data),
+		Components: getActionRow(browser.Page, browser.SubReddit),
 	}
 	data, _ := json.Marshal(response)
 
@@ -63,10 +76,15 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 func getActionRow(page int, subreddit string) []discordgo.MessageComponent {
 	browser := browserTracker{
 		SubReddit: subreddit,
-		Page:      page,
+		Page:      page - 1,
 		Action:    "previous",
 	}
+	if browser.Page < 0 {
+		browser.Page = 0
+	}
+
 	bdataPrev := browser.Marshal()
+	browser.Page = page + 1
 	browser.Action = "next"
 	bdataNext := browser.Marshal()
 
