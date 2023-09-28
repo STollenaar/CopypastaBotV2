@@ -8,7 +8,6 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/bwmarrin/discordgo"
-	"github.com/stollenaar/copypastabotv2/internal/util"
 )
 
 func main() {
@@ -16,8 +15,8 @@ func main() {
 }
 
 func handler() (events.APIGatewayProxyResponse, error) {
-	response := util.ResponseObject{
-		Data: discordgo.InteractionResponseData{
+	response := discordgo.InteractionResponse{
+		Data: &discordgo.InteractionResponseData{
 			Content: "Pong",
 		},
 		Type: discordgo.InteractionResponseChannelMessageWithSource,

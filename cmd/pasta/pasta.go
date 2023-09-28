@@ -27,8 +27,8 @@ func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 	fmt.Println(interaction.ApplicationCommandData().Options)
 	parsedArguments := util.ParseArguments([]string{"url", "postid"}, interaction.ApplicationCommandData().Options)
 	fmt.Println(parsedArguments)
-	response := util.ResponseObject{
-		Data: discordgo.InteractionResponseData{
+	response := discordgo.InteractionResponse{
+		Data: &discordgo.InteractionResponseData{
 			Content: fmt.Sprintln("something went wrong"),
 		},
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
