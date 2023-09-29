@@ -14,7 +14,7 @@ const (
 	PATCH_URL        = "https://discord.com/api/v10/webhooks/%s/%s/messages/%s"
 )
 
-func SendRequest(method, interactionID, interactionToken string, data []byte, messageID ...string) error {
+func SendRequest(method, interactionID, interactionToken string, data []byte, messageID ...string) (*http.Response, error) {
 	if len(messageID) == 0 {
 		messageID = append(messageID, "@original")
 	}
@@ -28,18 +28,20 @@ func SendRequest(method, interactionID, interactionToken string, data []byte, me
 		req, err = http.NewRequest("PATCH", fmt.Sprintf(PATCH_URL, interactionID, interactionToken, messageID[0]), bytes.NewBuffer(data))
 	case "WEBHOOK_POST":
 		req, err = http.NewRequest("POST", fmt.Sprintf(WEBHOOK_POST_URL, interactionID, interactionToken), bytes.NewBuffer(data))
+	case "GET":
+		req, err = http.NewRequest("GET", fmt.Sprintf(PATCH_URL, interactionID, interactionToken, messageID[0]), bytes.NewBuffer(data))
 	}
 	req.Header.Add("Content-Type", "application/json")
 	if err != nil {
 		fmt.Println(err)
-		return err
+		return nil, err
 	}
 	client := &http.Client{}
 	fmt.Println(*req)
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Println(err)
-		return err
+		return nil, err
 	}
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(resp.Body)
@@ -47,7 +49,7 @@ func SendRequest(method, interactionID, interactionToken string, data []byte, me
 
 	bodyString := string(bodyData)
 	fmt.Println(resp, bodyString)
-	return nil
+	return resp, nil
 }
 
 // Verifying the signature

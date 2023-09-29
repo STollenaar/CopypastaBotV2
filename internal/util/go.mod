@@ -1,6 +1,6 @@
 module github.com/stollenaar/copypastabotv2/internal/util
 
-go 1.18
+go 1.21
 
 require (
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.37.5
