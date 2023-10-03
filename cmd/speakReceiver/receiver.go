@@ -94,6 +94,10 @@ func synthData(object statsUtil.SQSObject) error {
 	if err != nil {
 		return fmt.Errorf("error sending request %v", err)
 	}
+	if object.Type == "redditpost" {
+		post := util.GetRedditPost(object.Data)
+		object.Data = post.Post.Body
+	}
 
 	var message discordgo.Message
 	err = json.Unmarshal([]byte(bodyString), &message)

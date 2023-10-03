@@ -42,7 +42,8 @@ locals {
       enable_alarm                   = false
       runtime                        = "provided.al2"
       handler                        = "bootstrap"
-      timeout                        = 60 * 2
+      timeout                        = 3
+      memory_size                    = 128
       layers                         = []
       reserved_concurrent_executions = -1
       extra_permissions              = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.browse_sqs_role_policy_document.json]
@@ -56,6 +57,7 @@ locals {
       runtime                        = "provided.al2"
       handler                        = "bootstrap"
       timeout                        = 60 * 2
+      memory_size                    = 128
       layers                         = []
       reserved_concurrent_executions = -1
       extra_permissions              = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.browse_sqs_role_policy_document.json]
@@ -71,7 +73,8 @@ locals {
       enable_alarm                   = false
       runtime                        = "provided.al2"
       handler                        = "bootstrap"
-      timeout                        = 60 * 2
+      timeout                        = 3
+      memory_size                    = 128
       layers                         = []
       reserved_concurrent_executions = -1
       extra_permissions              = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.sqs_role_policy_document.json]
@@ -84,7 +87,8 @@ locals {
       enable_alarm                   = false
       runtime                        = "provided.al2"
       handler                        = "bootstrap"
-      timeout                        = 60 * 2
+      timeout                        = 3
+      memory_size                    = 128
       layers                         = []
       reserved_concurrent_executions = -1
       extra_permissions              = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json]
@@ -100,7 +104,8 @@ locals {
       enable_alarm                   = false
       runtime                        = "provided.al2"
       handler                        = "bootstrap"
-      timeout                        = 60 * 2
+      timeout                        = 3
+      memory_size                    = 128
       layers                         = []
       reserved_concurrent_executions = -1
       extra_permissions              = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json]
@@ -112,6 +117,7 @@ locals {
       runtime                        = "provided.al2"
       handler                        = "bootstrap"
       timeout                        = 60 * 5
+      memory_size                    = 2048
       layers                         = []
       reserved_concurrent_executions = -1
       extra_permissions              = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.sqs_role_policy_document.json, data.aws_iam_policy_document.speak_sqs_role_policy_document.json]
@@ -124,7 +130,8 @@ locals {
       enable_alarm                   = false
       runtime                        = "provided.al2"
       handler                        = "bootstrap"
-      timeout                        = 60 * 2
+      timeout                        = 5
+      memory_size                    = 128
       layers                         = []
       reserved_concurrent_executions = -1
       extra_permissions              = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.lambda_execution_invocation_document.json, data.aws_iam_policy_document.browse_sqs_role_policy_document.json]
@@ -138,7 +145,8 @@ locals {
       enable_alarm                   = false
       runtime                        = "provided.al2"
       handler                        = "bootstrap"
-      timeout                        = 60 * 2
+      timeout                        = 3
+      memory_size                    = 128
       layers                         = []
       reserved_concurrent_executions = -1
       extra_permissions              = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.sqs_role_policy_document.json, data.aws_iam_policy_document.speak_sqs_role_policy_document.json]
@@ -153,11 +161,16 @@ locals {
       runtime                        = "provided.al2"
       handler                        = "bootstrap"
       timeout                        = 60 * 10
+      memory_size                    = 128
       layers                         = [data.aws_lambda_layer_version.ffmpeg_layer.arn]
       reserved_concurrent_executions = 1
       extra_permissions              = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.speak_sqs_role_policy_document.json, data.aws_iam_policy_document.polly_role_policy_document.json]
       environment_variables = {
-        AWS_PARAMETER_DISCORD_TOKEN = "/discord_tokens/${local.name}"
+        AWS_PARAMETER_DISCORD_TOKEN        = "/discord_tokens/${local.name}"
+        AWS_PARAMETER_REDDIT_USERNAME      = "/reddit/username"
+        AWS_PARAMETER_REDDIT_PASSWORD      = "/reddit/password"
+        AWS_PARAMETER_REDDIT_CLIENT_ID     = "/reddit/client_id"
+        AWS_PARAMETER_REDDIT_CLIENT_SECRET = "/reddit/client_secret"
       }
     }
   }
