@@ -24,6 +24,10 @@ data "aws_region" "current" {}
 
 data "aws_caller_identity" "current" {}
 
+data "aws_lambda_layer_version" "ffmpeg_layer" {
+  layer_name = "ffmpeg"
+}
+
 # IAM policy document for the Lambda to access the parameter store
 data "aws_iam_policy_document" "lambda_execution_role_policy_document" {
   statement {
@@ -73,7 +77,7 @@ data "aws_iam_policy_document" "sqs_role_policy_document" {
 # IAM policy document for the container to access the sqs queue
 data "aws_iam_policy_document" "browse_sqs_role_policy_document" {
   statement {
-    sid    = "SQSSendMessage"
+    sid    = "SQSBrowseSendMessage"
     effect = "Allow"
     actions = [
       "sqs:DeleteMessage",
@@ -84,6 +88,37 @@ data "aws_iam_policy_document" "browse_sqs_role_policy_document" {
     ]
     resources = [
       aws_sqs_queue.browse_request.arn
+    ]
+  }
+}
+# IAM policy document for the container to access the sqs queue
+data "aws_iam_policy_document" "speak_sqs_role_policy_document" {
+  statement {
+    sid    = "SQSSpeakSendMessage"
+    effect = "Allow"
+    actions = [
+      "sqs:DeleteMessage",
+      "sqs:GetQueueAttributes",
+      "sqs:GetQueueUrl",
+      "sqs:ReceiveMessage",
+      "sqs:SendMessage",
+    ]
+    resources = [
+      aws_sqs_queue.speak_request.arn
+    ]
+  }
+}
+
+# IAM policy document for the container to access the sqs queue
+data "aws_iam_policy_document" "polly_role_policy_document" {
+  statement {
+    sid    = "PollySynthSpeech"
+    effect = "Allow"
+    actions = [
+      "polly:SynthesizeSpeech",
+    ]
+    resources = [
+        "*"
     ]
   }
 }

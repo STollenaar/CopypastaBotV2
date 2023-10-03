@@ -11,8 +11,8 @@ resource "null_resource" "go_build" {
 }
 
 resource "aws_cloudwatch_log_group" "lambda_function_log_group" {
-  for_each = var.functions
-  name     = "/aws/lambda/${each.key}"
+  for_each          = var.functions
+  name              = "/aws/lambda/${each.key}"
   retention_in_days = 7
 }
 
@@ -22,16 +22,18 @@ resource "aws_lambda_function" "lambda_function" {
   ]
   for_each = var.functions
 
-  filename         = "${path.root}/../cmd/${each.key}/${each.key}.zip"
-  description      = each.value.description
-  role             = aws_iam_role.lambda_execution_role[each.key].arn
-  function_name    = each.key
-  handler          = each.value.handler
-  source_code_hash = try(each.value.override_zip_location, null) != null ? filebase64sha256(each.value.override_zip_location) : data.archive_file.lambda_zip[each.key].output_base64sha256
-  runtime          = each.value.runtime
-  timeout          = try(each.value.timeout, null) != null ? each.value.timeout : null
-  memory_size      = try(each.value.memory_size, null) != null ? each.value.memory_size : null
-  tags             = try(each.value.tags, null) != null ? each.value.tags : {}
+  filename                       = "${path.root}/../cmd/${each.key}/${each.key}.zip"
+  description                    = each.value.description
+  role                           = aws_iam_role.lambda_execution_role[each.key].arn
+  function_name                  = each.key
+  layers                         = try(each.value.layers, null)
+  handler                        = each.value.handler
+  source_code_hash               = try(each.value.override_zip_location, null) != null ? filebase64sha256(each.value.override_zip_location) : data.archive_file.lambda_zip[each.key].output_base64sha256
+  runtime                        = each.value.runtime
+  timeout                        = try(each.value.timeout, null) != null ? each.value.timeout : null
+  memory_size                    = try(each.value.memory_size, null) != null ? each.value.memory_size : null
+  reserved_concurrent_executions = try(each.value.reserved_concurrent_executions, null)
+  tags                           = try(each.value.tags, null) != null ? each.value.tags : {}
 
   dynamic "environment" {
     for_each = try(each.value.environment_variables, null) != null ? [each.value.environment_variables] : []

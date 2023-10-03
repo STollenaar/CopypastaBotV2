@@ -38,23 +38,27 @@ locals {
 
   functions = {
     browse = {
-      description       = "Browse command for CopypastaBot"
-      enable_alarm      = false
-      runtime           = "provided.al2"
-      handler           = "bootstrap"
-      timeout           = 60 * 2
-      extra_permissions = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.browse_sqs_role_policy_document.json]
+      description                    = "Browse command for CopypastaBot"
+      enable_alarm                   = false
+      runtime                        = "provided.al2"
+      handler                        = "bootstrap"
+      timeout                        = 60 * 2
+      layers                         = []
+      reserved_concurrent_executions = -1
+      extra_permissions              = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.browse_sqs_role_policy_document.json]
       environment_variables = {
         AWS_SQS_URL = aws_sqs_queue.browse_request.url
       }
     }
     browseReceiver = {
-      description       = "browseReceiver for CopypastaBot"
-      enable_alarm      = false
-      runtime           = "provided.al2"
-      handler           = "bootstrap"
-      timeout           = 60 * 2
-      extra_permissions = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.browse_sqs_role_policy_document.json]
+      description                    = "browseReceiver for CopypastaBot"
+      enable_alarm                   = false
+      runtime                        = "provided.al2"
+      handler                        = "bootstrap"
+      timeout                        = 60 * 2
+      layers                         = []
+      reserved_concurrent_executions = -1
+      extra_permissions              = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.browse_sqs_role_policy_document.json]
       environment_variables = {
         AWS_PARAMETER_REDDIT_USERNAME      = "/reddit/username"
         AWS_PARAMETER_REDDIT_PASSWORD      = "/reddit/password"
@@ -63,23 +67,27 @@ locals {
       }
     }
     markov = {
-      description       = "Markov command for CopypastaBot"
-      enable_alarm      = false
-      runtime           = "provided.al2"
-      handler           = "bootstrap"
-      timeout           = 60 * 2
-      extra_permissions = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.sqs_role_policy_document.json]
+      description                    = "Markov command for CopypastaBot"
+      enable_alarm                   = false
+      runtime                        = "provided.al2"
+      handler                        = "bootstrap"
+      timeout                        = 60 * 2
+      layers                         = []
+      reserved_concurrent_executions = -1
+      extra_permissions              = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.sqs_role_policy_document.json]
       environment_variables = {
         AWS_SQS_URL = data.terraform_remote_state.statisticsbot.outputs.sqs.request.url
       }
     }
     pasta = {
-      description       = "Pasta command for CopypastaBot"
-      enable_alarm      = false
-      runtime           = "provided.al2"
-      handler           = "bootstrap"
-      timeout           = 60 * 2
-      extra_permissions = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json]
+      description                    = "Pasta command for CopypastaBot"
+      enable_alarm                   = false
+      runtime                        = "provided.al2"
+      handler                        = "bootstrap"
+      timeout                        = 60 * 2
+      layers                         = []
+      reserved_concurrent_executions = -1
+      extra_permissions              = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json]
       environment_variables = {
         AWS_PARAMETER_REDDIT_USERNAME      = "/reddit/username"
         AWS_PARAMETER_REDDIT_PASSWORD      = "/reddit/password"
@@ -88,43 +96,69 @@ locals {
       }
     }
     ping = {
-      description           = "Ping command for CopypastaBot"
-      enable_alarm          = false
-      runtime               = "provided.al2"
-      handler               = "bootstrap"
-      timeout               = 60 * 2
-      extra_permissions     = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json]
-      environment_variables = {}
+      description                    = "Ping command for CopypastaBot"
+      enable_alarm                   = false
+      runtime                        = "provided.al2"
+      handler                        = "bootstrap"
+      timeout                        = 60 * 2
+      layers                         = []
+      reserved_concurrent_executions = -1
+      extra_permissions              = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json]
+      environment_variables          = {}
     }
     sqsReceiver = {
-      description           = "sqs receiver for CopypastaBot"
-      enable_alarm          = false
-      runtime               = "provided.al2"
-      handler               = "bootstrap"
-      timeout               = 60 * 5
-      extra_permissions     = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.sqs_role_policy_document.json]
-      environment_variables = {}
+      description                    = "sqs receiver for CopypastaBot"
+      enable_alarm                   = false
+      runtime                        = "provided.al2"
+      handler                        = "bootstrap"
+      timeout                        = 60 * 5
+      layers                         = []
+      reserved_concurrent_executions = -1
+      extra_permissions              = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.sqs_role_policy_document.json, data.aws_iam_policy_document.speak_sqs_role_policy_document.json]
+      environment_variables = {
+        AWS_SQS_URL = aws_sqs_queue.speak_request.url
+      }
     }
     router = {
-      description       = "Router lambda to handle all commands correctly"
-      enable_alarm      = false
-      runtime           = "provided.al2"
-      handler           = "bootstrap"
-      timeout           = 60 * 2
-      extra_permissions = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.lambda_execution_invocation_document.json, data.aws_iam_policy_document.browse_sqs_role_policy_document.json]
+      description                    = "Router lambda to handle all commands correctly"
+      enable_alarm                   = false
+      runtime                        = "provided.al2"
+      handler                        = "bootstrap"
+      timeout                        = 60 * 2
+      layers                         = []
+      reserved_concurrent_executions = -1
+      extra_permissions              = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.lambda_execution_invocation_document.json, data.aws_iam_policy_document.browse_sqs_role_policy_document.json]
       environment_variables = {
         AWS_PARAMETER_PUBLIC_DISCORD_TOKEN = "/discord_tokens/${local.name}_public",
         AWS_SQS_URL                        = aws_sqs_queue.browse_request.url
       }
     }
     speak = {
-      description           = "Speak command for CopypastaBot"
-      enable_alarm          = false
-      runtime               = "provided.al2"
-      handler               = "bootstrap"
-      timeout               = 60 * 2
-      extra_permissions     = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.sqs_role_policy_document.json]
-      environment_variables = {}
+      description                    = "Speak command for CopypastaBot"
+      enable_alarm                   = false
+      runtime                        = "provided.al2"
+      handler                        = "bootstrap"
+      timeout                        = 60 * 2
+      layers                         = []
+      reserved_concurrent_executions = -1
+      extra_permissions              = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.sqs_role_policy_document.json, data.aws_iam_policy_document.speak_sqs_role_policy_document.json]
+      environment_variables = {
+        AWS_SQS_URL       = data.terraform_remote_state.statisticsbot.outputs.sqs.request.url
+        AWS_SQS_URL_OTHER = aws_sqs_queue.speak_request.url
+      }
+    }
+    speakReceiver = {
+      description                    = "Speak Receiver for CopypastaBot"
+      enable_alarm                   = false
+      runtime                        = "provided.al2"
+      handler                        = "bootstrap"
+      timeout                        = 60 * 10
+      layers                         = [data.aws_lambda_layer_version.ffmpeg_layer.arn]
+      reserved_concurrent_executions = 1
+      extra_permissions              = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.speak_sqs_role_policy_document.json, data.aws_iam_policy_document.polly_role_policy_document.json]
+      environment_variables = {
+        AWS_PARAMETER_DISCORD_TOKEN = "/discord_tokens/${local.name}"
+      }
     }
   }
 }
@@ -133,3 +167,4 @@ module "lambda_functions" {
   source    = "./templates/lambda"
   functions = local.functions
 }
+
