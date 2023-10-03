@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -19,7 +18,9 @@ import (
 )
 
 var (
-	sqsClient *sqs.Client
+	sqsClient   *sqs.Client
+	sendTimeout = true
+	sqsObject   statsUtil.SQSObject
 )
 
 func init() {
@@ -32,11 +33,21 @@ func init() {
 }
 
 func main() {
-	lambda.Start(handler)
+	lambda.StartWithOptions(handler, lambda.WithEnableSIGTERM(timeoutHandler))
+}
+
+func timeoutHandler() {
+	if sendTimeout {
+		d := "If you see this, and error likely happened. Whoops"
+		response := discordgo.WebhookEdit{
+			Content: &d,
+		}
+		data, _ := json.Marshal(response)
+		util.SendRequest("PATCH", sqsObject.ApplicationID, sqsObject.Token, util.WEBHOOK, data)
+	}
 }
 
 func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
-	var sqsObject statsUtil.SQSObject
 
 	err := json.Unmarshal([]byte(sqsEvent.Records[0].Body), &sqsObject)
 	if err != nil {
@@ -54,7 +65,18 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 			fmt.Println(err)
 			return err
 		}
-		util.SendRequest("PATCH", sqsObject.ApplicationID, sqsObject.Token, util.WEBHOOK, data)
+		resp, err := util.SendRequest("PATCH", sqsObject.ApplicationID, sqsObject.Token, util.WEBHOOK, data)
+		if resp != nil {
+			buf := new(bytes.Buffer)
+			buf.ReadFrom(resp.Body)
+			bodyData := buf.String()
+
+			bodyString := string(bodyData)
+			fmt.Println(resp, bodyString)
+		}
+		if err != nil {
+			fmt.Println(err)
+		}
 	}
 
 	var markovData string
@@ -65,7 +87,7 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 	case "user":
 		markovData = handleUser(sqsObject.Data)
 	default:
-		return errors.New("unimplemented type")
+		return fmt.Errorf("unimplemented type: %s", sqsObject.Type)
 	}
 
 	switch sqsObject.Command {
@@ -105,6 +127,7 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 			QueueUrl:    aws.String(util.ConfigFile.AWS_SQS_URL),
 		})
 		if err != nil {
+			sendTimeout = false
 			fmt.Println(err)
 			resp, err := util.SendRequest("PATCH", sqsObject.ApplicationID, sqsObject.Token, util.WEBHOOK, []byte(err.Error()))
 			if resp != nil {
@@ -117,9 +140,9 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 			}
 			return err
 		}
-		return nil
+		return err
 	default:
-		return errors.New("unimplemented command")
+		return fmt.Errorf("unimplemented command: %s", sqsObject.Command)
 	}
 }
 
