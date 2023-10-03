@@ -25,7 +25,7 @@ func SendRequest(method, interactionID, interactionToken string, kind KIND, data
 	if kind == INTERACTION {
 		url += "callback"
 	} else {
-		url += "messages/%s"
+		url += "/messages/%s/"
 		if len(messageID) == 0 {
 			url += "@orignal"
 		} else {
