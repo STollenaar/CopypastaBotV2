@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/aws/aws-lambda-go v1.41.0
 	github.com/bwmarrin/discordgo v0.27.1
-	github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20230927012455-7858bede1752
+	github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20231003140913-dd656b441907
 )
 
 require (

@@ -71,6 +71,12 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20230925010751-24c18ab065fc h1:UsWKBIqyUY6LbyWGkEEgPSi/98E0/FPEs6rObTBwKRY=
 github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20230925010751-24c18ab065fc/go.mod h1:7WtGfj4HlhUGj4qNZZ381ULLDo0owj1dcURWRmksoCU=
+github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20231003140402-47d3e85979aa h1:COtxb5/hMH9AWbVMNr8ON5Oh00yxiN13/1J81iNB2VA=
+github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20231003140402-47d3e85979aa/go.mod h1:krc3vtwc4DM8b3oiwm/te2o7uEV8TY81CasB83ifWvU=
+github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20231003140646-a1aec6fe3b7e h1:LJu9p7DmeEePF97mgt+b/PXJOA5dnzd/tOZWtn6xK1M=
+github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20231003140646-a1aec6fe3b7e/go.mod h1:krc3vtwc4DM8b3oiwm/te2o7uEV8TY81CasB83ifWvU=
+github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20231003140913-dd656b441907 h1:sHq0dQJD0AMfu0h/5fvbp0kyNeblbQXahSjMQ24/Ft4=
+github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20231003140913-dd656b441907/go.mod h1:krc3vtwc4DM8b3oiwm/te2o7uEV8TY81CasB83ifWvU=
 github.com/stollenaar/copypastabotv2/pkg/markov v0.0.0-20230921225706-a9f4b360581c h1:QGTnLvo8MVsP24x2YP5kQC5F3yf0f2LPAzu696XpBCk=
 github.com/stollenaar/copypastabotv2/pkg/markov v0.0.0-20230921225706-a9f4b360581c/go.mod h1:D2tL3dJgL9MMd4fDn+B/yQMZkHk1zkhj+aO7JbdPU+A=
 github.com/stollenaar/statisticsbot/util v0.0.0-20230924143446-b8273375c638 h1:F/BIf4Zt+mQDmFItAfOcmYHvz1ToCRHV2ol760v3eOM=

@@ -70,7 +70,7 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 		Components: getActionRow(browser.Page, browser.SubReddit),
 	}
 	data, _ := json.Marshal(response)
-	resp, err := util.SendRequest("PATCH", sqsObject.ApplicationID, sqsObject.Token, data)
+	resp, err := util.SendRequest("PATCH", sqsObject.ApplicationID, sqsObject.Token, util.WEBHOOK, data)
 	if resp != nil {
 		buf := new(bytes.Buffer)
 		buf.ReadFrom(resp.Body)

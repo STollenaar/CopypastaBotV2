@@ -6,7 +6,7 @@ require (
 	github.com/aws/aws-lambda-go v1.41.0
 	github.com/bwmarrin/discordgo v0.27.1
 	github.com/jonas747/dca v0.0.0-20210930103944-155f5e5f0cc7
-	github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20230929192658-a6541ba7065e
+	github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20231003140913-dd656b441907
 	github.com/stollenaar/statisticsbot/util v0.0.0-20230926020424-6c2671243e9a
 )
 

@@ -1,6 +1,8 @@
 module github.com/stollenaar/copypastabotv2/cmd/sqsReceiver
 
-go 1.20
+go 1.21
+
+toolchain go1.21.1
 
 require (
 	github.com/aws/aws-lambda-go v1.41.0
@@ -8,7 +10,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.18.40
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.24.5
 	github.com/bwmarrin/discordgo v0.27.1
-	github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20230925010751-24c18ab065fc
+	github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20231003140913-dd656b441907
 	github.com/stollenaar/copypastabotv2/pkg/markov v0.0.0-20230921225706-a9f4b360581c
 	github.com/stollenaar/statisticsbot/util v0.0.0-20230924143446-b8273375c638
 )

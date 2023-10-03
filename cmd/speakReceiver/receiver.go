@@ -34,9 +34,9 @@ var (
 )
 
 type Queue struct {
-	synthed *polly.SynthesizeSpeechOutput
-	guildID string
-	userID  string
+	synthed   *polly.SynthesizeSpeechOutput
+	sqsObject statsUtil.SQSObject
+	userID    string
 }
 
 func init() {
@@ -54,16 +54,19 @@ func init() {
 
 	bot, err = discordgo.New("Bot " + token)
 	if err != nil {
+		bot.Close()
 		log.Fatalf("error creating new discord session: %v", err)
 	}
 
 	err = bot.Open()
 	if err != nil {
+		bot.Close()
 		log.Fatalf("error creating session websocket: %v", err)
 	}
 }
 
 func main() {
+	defer bot.Close()
 	lambda.Start(handler)
 }
 
@@ -81,7 +84,7 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 
 // Command create a tts experience for the generated markov
 func synthData(object statsUtil.SQSObject) error {
-	resp, err := util.SendRequest("GET", object.ApplicationID, object.Token, []byte{})
+	resp, err := util.SendRequest("GET", object.ApplicationID, object.Token, util.WEBHOOK, []byte{})
 	var bodyString string
 	if resp != nil {
 		buf := new(bytes.Buffer)
@@ -121,9 +124,9 @@ func synthData(object statsUtil.SQSObject) error {
 			continue
 		}
 		queue = append(queue, &Queue{
-			synthed: synthed,
-			userID:  message.Interaction.User.ID,
-			guildID: object.GuildID,
+			synthed:   synthed,
+			userID:    message.Interaction.User.ID,
+			sqsObject: object,
 		})
 	}
 	if stream != nil {
@@ -144,7 +147,15 @@ func doSpeech() error {
 	currentSpeech := queue[0]
 	queue = queue[1:]
 
-	vs, err := bot.State.VoiceState(currentSpeech.guildID, currentSpeech.userID)
+	d := "Playing now"
+	response := discordgo.WebhookEdit{
+		Content: &d,
+	}
+	data, _ := json.Marshal(response)
+	util.SendRequest("PATCH", currentSpeech.sqsObject.ApplicationID, currentSpeech.sqsObject.Token, util.WEBHOOK, data)
+	defer util.SendRequest("DELETE", currentSpeech.sqsObject.ApplicationID, currentSpeech.sqsObject.Token, util.WEBHOOK, data)
+
+	vs, err := bot.State.VoiceState(currentSpeech.sqsObject.GuildID, currentSpeech.userID)
 	if err != nil {
 		return fmt.Errorf("error finding voice state: %v", err)
 	}
@@ -157,15 +168,15 @@ func doSpeech() error {
 	// Send the buffer data.
 	stream := currentSpeech.synthed.AudioStream
 
-	vc, err := bot.ChannelVoiceJoin(currentSpeech.guildID, vs.ChannelID, false, false)
+	vc, err := bot.ChannelVoiceJoin(currentSpeech.sqsObject.GuildID, vs.ChannelID, false, false)
 	if len(queue) == 0 {
-		defer 	vc.Disconnect()
+		defer vc.Disconnect()
 	}
 
 	if err != nil {
 		return fmt.Errorf("error joining voice channel: %v", err)
 	}
-	guildVC[currentSpeech.guildID] = vc
+	guildVC[currentSpeech.sqsObject.GuildID] = vc
 	err = vc.Speaking(true)
 	if err != nil {
 		return fmt.Errorf("error setting speaking to true: %v", err)
@@ -208,7 +219,7 @@ func doSpeech() error {
 	if len(queue) > 0 {
 		return doSpeech()
 	} else {
-		guildVC[currentSpeech.guildID] = nil
+		guildVC[currentSpeech.sqsObject.GuildID] = nil
 	}
 	return nil
 }

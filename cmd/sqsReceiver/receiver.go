@@ -43,6 +43,19 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 		fmt.Println(err)
 		return err
 	}
+	if sqsObject.Command == "speak" {
+		d := "Data received, building Markov"
+		response := discordgo.WebhookEdit{
+			Content: &d,
+		}
+
+		data, err := json.Marshal(response)
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
+		util.SendRequest("PATCH", sqsObject.ApplicationID, sqsObject.Token, util.WEBHOOK, data)
+	}
 
 	var markovData string
 
@@ -66,7 +79,7 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 			fmt.Println(err)
 			return err
 		}
-		resp, err := util.SendRequest("PATCH", sqsObject.ApplicationID, sqsObject.Token, data)
+		resp, err := util.SendRequest("PATCH", sqsObject.ApplicationID, sqsObject.Token, util.WEBHOOK, data)
 		if resp != nil {
 			buf := new(bytes.Buffer)
 			buf.ReadFrom(resp.Body)
@@ -93,7 +106,7 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 		})
 		if err != nil {
 			fmt.Println(err)
-			resp, err := util.SendRequest("PATCH", sqsObject.ApplicationID, sqsObject.Token, []byte(err.Error()))
+			resp, err := util.SendRequest("PATCH", sqsObject.ApplicationID, sqsObject.Token, util.WEBHOOK, []byte(err.Error()))
 			if resp != nil {
 				buf := new(bytes.Buffer)
 				buf.ReadFrom(resp.Body)
