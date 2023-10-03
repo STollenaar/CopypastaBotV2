@@ -8,34 +8,36 @@ import (
 	"net/http"
 )
 
+type KIND string
+
 const (
+	API_URL          = "https://discord.com/api/v10/%s/%s/%s"
+	INTERACTION KIND = "interactions"
+	WEBHOOK     KIND = "webhooks"
+
 	POST_URL         = "https://discord.com/api/v10/interactions/%s/%s/callback"
 	WEBHOOK_POST_URL = "https://discord.com/api/v10/webhooks/%s/%s"
 	PATCH_URL        = "https://discord.com/api/v10/webhooks/%s/%s/messages/%s"
 )
 
-func SendRequest(method, interactionID, interactionToken string, data []byte, messageID ...string) (*http.Response, error) {
-	if len(messageID) == 0 {
-		messageID = append(messageID, "@original")
+func SendRequest(method, interactionID, interactionToken string, kind KIND, data []byte, messageID ...string) (*http.Response, error) {
+	url := API_URL
+	if kind == INTERACTION {
+		url += "callback"
+	} else {
+		url += "messages/%s"
+		if len(messageID) == 0 {
+			url += "@orignal"
+		} else {
+			url += messageID[0]
+		}
 	}
-	// Create a HTTP post request
-	var req *http.Request
-	var err error
-	switch method {
-	case "POST":
-		req, err = http.NewRequest("POST", fmt.Sprintf(POST_URL, interactionID, interactionToken), bytes.NewBuffer(data))
-	case "PATCH":
-		req, err = http.NewRequest("PATCH", fmt.Sprintf(PATCH_URL, interactionID, interactionToken, messageID[0]), bytes.NewBuffer(data))
-	case "WEBHOOK_POST":
-		req, err = http.NewRequest("POST", fmt.Sprintf(WEBHOOK_POST_URL, interactionID, interactionToken), bytes.NewBuffer(data))
-	case "GET":
-		req, err = http.NewRequest("GET", fmt.Sprintf(PATCH_URL, interactionID, interactionToken, messageID[0]), bytes.NewBuffer(data))
-	}
-	req.Header.Add("Content-Type", "application/json")
+	req, err := http.NewRequest(method, fmt.Sprintf(url, kind, interactionID, interactionToken), bytes.NewBuffer(data))
 	if err != nil {
 		fmt.Println(err)
 		return nil, err
 	}
+	req.Header.Add("Content-Type", "application/json")
 	client := &http.Client{}
 	fmt.Println(*req)
 	resp, err := client.Do(req)
