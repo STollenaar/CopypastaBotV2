@@ -125,6 +125,16 @@ func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 			} else {
 				json.Unmarshal(out.Payload, &apiResponse)
 			}
+		case "speak":
+			out, err := lambdaClient.Invoke(context.TODO(), &lambdaService.InvokeInput{
+				FunctionName: aws.String("speak"),
+				Payload:      d,
+			})
+			if err != nil {
+				apiResponse.Body = err.Error()
+			} else {
+				json.Unmarshal(out.Payload, &apiResponse)
+			}
 		default:
 			response = discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,

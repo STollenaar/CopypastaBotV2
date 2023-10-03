@@ -14,7 +14,7 @@ const (
 	PATCH_URL        = "https://discord.com/api/v10/webhooks/%s/%s/messages/%s"
 )
 
-func SendRequest(method, interactionID, interactionToken string, data []byte, messageID ...string) (*http.Response, string, error) {
+func SendRequest(method, interactionID, interactionToken string, data []byte, messageID ...string) (*http.Response, error) {
 	if len(messageID) == 0 {
 		messageID = append(messageID, "@original")
 	}
@@ -34,22 +34,16 @@ func SendRequest(method, interactionID, interactionToken string, data []byte, me
 	req.Header.Add("Content-Type", "application/json")
 	if err != nil {
 		fmt.Println(err)
-		return nil, "", err
+		return nil, err
 	}
 	client := &http.Client{}
 	fmt.Println(*req)
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Println(err)
-		return nil, "", err
+		return nil, err
 	}
-	buf := new(bytes.Buffer)
-	buf.ReadFrom(resp.Body)
-	bodyData := buf.String()
-
-	bodyString := string(bodyData)
-	fmt.Println(resp, bodyString)
-	return resp, bodyData, nil
+	return resp, nil
 }
 
 // Verifying the signature

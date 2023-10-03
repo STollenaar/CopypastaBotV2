@@ -4,6 +4,9 @@ go 1.20
 
 require (
 	github.com/aws/aws-lambda-go v1.41.0
+	github.com/aws/aws-sdk-go-v2 v1.21.0
+	github.com/aws/aws-sdk-go-v2/config v1.18.40
+	github.com/aws/aws-sdk-go-v2/service/sqs v1.24.5
 	github.com/bwmarrin/discordgo v0.27.1
 	github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20230925010751-24c18ab065fc
 	github.com/stollenaar/copypastabotv2/pkg/markov v0.0.0-20230921225706-a9f4b360581c
@@ -13,8 +16,6 @@ require (
 require (
 	github.com/PuerkitoBio/goquery v1.8.0 // indirect
 	github.com/andybalholm/cascadia v1.3.1 // indirect
-	github.com/aws/aws-sdk-go-v2 v1.21.0 // indirect
-	github.com/aws/aws-sdk-go-v2/config v1.18.40 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.13.38 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.13.11 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.41 // indirect
