@@ -161,7 +161,7 @@ locals {
       runtime                        = "provided.al2"
       handler                        = "bootstrap"
       timeout                        = 60 * 10
-      memory_size                    = 128
+      memory_size                    = 512
       layers                         = [data.aws_lambda_layer_version.ffmpeg_layer.arn]
       reserved_concurrent_executions = 1
       extra_permissions              = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.speak_sqs_role_policy_document.json, data.aws_iam_policy_document.polly_role_policy_document.json]
