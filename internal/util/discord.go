@@ -27,7 +27,7 @@ func SendRequest(method, interactionID, interactionToken string, kind KIND, data
 	} else {
 		url += "/messages/"
 		if len(messageID) == 0 {
-			url += "@orignal"
+			url += "@original"
 		} else {
 			url += messageID[0]
 		}
