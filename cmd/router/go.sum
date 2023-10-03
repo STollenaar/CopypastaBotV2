@@ -70,8 +70,6 @@ github.com/montanaflynn/stats v0.0.0-20171201202039-1bf9dbcd8cbe/go.mod h1:wL8QJ
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
-github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20230921231547-d6de30e404cf h1:ANIRLukjU54CMAKDtg5JXiAdHQpjKS87dC9kr7yC+0w=
-github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20230921231547-d6de30e404cf/go.mod h1:7WtGfj4HlhUGj4qNZZ381ULLDo0owj1dcURWRmksoCU=
 github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20230927020811-925625d04223 h1:qQVw2PFAvC3v+sYrT/64emzA8Qfrfds2SrpzR9QCiMw=
 github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20230927020811-925625d04223/go.mod h1:7WtGfj4HlhUGj4qNZZ381ULLDo0owj1dcURWRmksoCU=
 github.com/stollenaar/statisticsbot/util v0.0.0-20230926020424-6c2671243e9a h1:EmMJXQR1JRs4ZpHsQchKPIZCnAM+DTXeZy1QLPMCSF4=

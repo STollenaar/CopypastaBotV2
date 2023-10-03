@@ -1,6 +1,6 @@
 module github.com/stollenaar/copypastabotv2/cmd/browseReceiver
 
-go 1.18
+go 1.21
 
 require (
 	github.com/aws/aws-lambda-go v1.41.0
@@ -39,7 +39,7 @@ require (
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/stollenaar/statisticsbot/util v0.0.0-20230926020424-6c2671243e9a
-	github.com/vartanbeno/go-reddit/v2 v2.0.1
+	github.com/vartanbeno/go-reddit/v2 v2.0.1 // indirect
 	golang.org/x/crypto v0.13.0 // indirect
 	golang.org/x/net v0.15.0 // indirect
 	golang.org/x/oauth2 v0.12.0 // indirect

@@ -1,12 +1,13 @@
 module github.com/stollenaar/copypastabotv2/cmd/browse
 
-go 1.18
+go 1.21
 
 require (
 	github.com/aws/aws-lambda-go v1.41.0
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.24.5
 	github.com/bwmarrin/discordgo v0.27.1
 	github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20230927012455-7858bede1752
+	github.com/stollenaar/statisticsbot/util v0.0.0-20230926020424-6c2671243e9a
 )
 
 require (
@@ -22,7 +23,6 @@ require (
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/klauspost/compress v1.13.6 // indirect
-	github.com/stollenaar/statisticsbot/util v0.0.0-20230926020424-6c2671243e9a // indirect
 	github.com/youmark/pkcs8 v0.0.0-20181117223130-1be2e3e5546d // indirect
 	go.mongodb.org/mongo-driver v1.12.1 // indirect
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4 // indirect
@@ -40,7 +40,7 @@ require (
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
-	github.com/vartanbeno/go-reddit/v2 v2.0.1
+	github.com/vartanbeno/go-reddit/v2 v2.0.1 // indirect
 	golang.org/x/crypto v0.13.0 // indirect
 	golang.org/x/net v0.15.0 // indirect
 	golang.org/x/oauth2 v0.12.0 // indirect

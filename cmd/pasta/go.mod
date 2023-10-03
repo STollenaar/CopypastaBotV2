@@ -1,6 +1,6 @@
 module github.com/stollenaar/copypastabotv2/cmd/pasta
 
-go 1.18
+go 1.21
 
 require (
 	github.com/aws/aws-lambda-go v1.41.0

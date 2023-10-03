@@ -1,6 +1,6 @@
 module github.com/stollenaar/copypastabotv2/pkg/markov
 
-go 1.18
+go 1.21
 
 require github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20230921231547-d6de30e404cf
 

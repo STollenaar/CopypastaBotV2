@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -69,8 +70,16 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 		Components: getActionRow(browser.Page, browser.SubReddit),
 	}
 	data, _ := json.Marshal(response)
+	resp, err := util.SendRequest("PATCH", sqsObject.ApplicationID, sqsObject.Token, data)
+	if resp != nil {
+		buf := new(bytes.Buffer)
+		buf.ReadFrom(resp.Body)
+		bodyData := buf.String()
 
-	return util.SendRequest("PATCH", sqsObject.ApplicationID, sqsObject.Token, data)
+		bodyString := string(bodyData)
+		fmt.Println(resp, bodyString)
+	}
+	return err
 }
 
 func getActionRow(page int, subreddit string) []discordgo.MessageComponent {
