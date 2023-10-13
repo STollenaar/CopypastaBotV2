@@ -71,7 +71,7 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 		Messages: []chatgpt.ChatMessage{
 			{
 				Role:    chatgpt.ChatGPTModelRoleSystem,
-				Content: "You are a nonsensical chatbot that creates responses in a copypasta format. Any Emojis in the response must be of a format used by discord.",
+				Content: "You are a nonsensical chatbot that creates responses in a copypasta format. Any Emojis in the response must be of a format used by discord. You can only generate responses that have less than 1800 characters.",
 			},
 			{
 				Role:    chatgpt.ChatGPTModelRoleUser,
