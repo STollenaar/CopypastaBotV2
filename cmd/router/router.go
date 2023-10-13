@@ -9,10 +9,10 @@ import (
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	lambdaService "github.com/aws/aws-sdk-go-v2/service/lambda"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/bwmarrin/discordgo"
 	"github.com/stollenaar/copypastabotv2/internal/util"
 	statsUtil "github.com/stollenaar/statisticsbot/util"
@@ -85,9 +85,9 @@ func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 	} else {
 		// Routing the commands to the correctly lambda that will handle it
 		switch interaction.ApplicationCommandData().Name {
-		case "ping":
+		case "browse":
 			out, err := lambdaClient.Invoke(context.TODO(), &lambdaService.InvokeInput{
-				FunctionName: aws.String("ping"),
+				FunctionName: aws.String("browse"),
 				Payload:      d,
 			})
 			if err != nil {
@@ -95,9 +95,9 @@ func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 			} else {
 				json.Unmarshal(out.Payload, &apiResponse)
 			}
-		case "pasta":
+		case "chat":
 			out, err := lambdaClient.Invoke(context.TODO(), &lambdaService.InvokeInput{
-				FunctionName: aws.String("pasta"),
+				FunctionName: aws.String("chat"),
 				Payload:      d,
 			})
 			if err != nil {
@@ -115,9 +115,19 @@ func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 			} else {
 				json.Unmarshal(out.Payload, &apiResponse)
 			}
-		case "browse":
+		case "ping":
 			out, err := lambdaClient.Invoke(context.TODO(), &lambdaService.InvokeInput{
-				FunctionName: aws.String("browse"),
+				FunctionName: aws.String("ping"),
+				Payload:      d,
+			})
+			if err != nil {
+				apiResponse.Body = err.Error()
+			} else {
+				json.Unmarshal(out.Payload, &apiResponse)
+			}
+		case "pasta":
+			out, err := lambdaClient.Invoke(context.TODO(), &lambdaService.InvokeInput{
+				FunctionName: aws.String("pasta"),
 				Payload:      d,
 			})
 			if err != nil {

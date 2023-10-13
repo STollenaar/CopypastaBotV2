@@ -32,6 +32,7 @@ type Config struct {
 
 	TERMINAL_REGEX string
 	STATISTICS_BOT string
+	OPENAI_KEY     string
 }
 
 var (
@@ -69,6 +70,7 @@ func init() {
 		REDDIT_CLIENT_SECRET:               os.Getenv("REDDIT_CLIENT_SECRET"),
 		TERMINAL_REGEX:                     os.Getenv("TERMINAL_REGEX"),
 		STATISTICS_BOT:                     os.Getenv("STATSBOT_URL"),
+		OPENAI_KEY:                         os.Getenv("OPENAI_KEY"),
 	}
 
 	if ConfigFile.TERMINAL_REGEX == "" {
@@ -108,8 +110,8 @@ func (c *Config) GetPublicDiscordToken() (string, error) {
 }
 
 func (c *Config) GetRedditUsername() (string, error) {
-	if ConfigFile.AWS_PARAMETER_REDDIT_USERNAME == "" && ConfigFile.REDDIT_USERNAME == "" {
-		log.Fatal("REDDIT_USERNAME or AWS_PARAMETER_REDDIT_USERNAME if not set.")
+	if c.AWS_PARAMETER_REDDIT_USERNAME == "" && c.REDDIT_USERNAME == "" {
+		log.Fatal("REDDIT_USERNAME or AWS_PARAMETER_REDDIT_USERNAME is not set.")
 	}
 
 	if c.REDDIT_USERNAME != "" {
@@ -119,8 +121,8 @@ func (c *Config) GetRedditUsername() (string, error) {
 }
 
 func (c *Config) GetRedditPassword() (string, error) {
-	if ConfigFile.AWS_PARAMETER_REDDIT_PASSWORD == "" && ConfigFile.REDDIT_PASSWORD == "" {
-		log.Fatal("AWS_PARAMETER_REDDIT_PASSWORD or REDDIT_PASSWORD if not set.")
+	if c.AWS_PARAMETER_REDDIT_PASSWORD == "" && c.REDDIT_PASSWORD == "" {
+		log.Fatal("AWS_PARAMETER_REDDIT_PASSWORD or REDDIT_PASSWORD is not set.")
 	}
 
 	if c.REDDIT_PASSWORD != "" {
@@ -130,8 +132,8 @@ func (c *Config) GetRedditPassword() (string, error) {
 }
 
 func (c *Config) GetRedditClientID() (string, error) {
-	if ConfigFile.AWS_PARAMETER_REDDIT_CLIENT_ID == "" && ConfigFile.REDDIT_CLIENT_ID == "" {
-		log.Fatal("REDDIT_CLIENT_ID or AWS_PARAMETER_REDDIT_CLIENT_ID if not set.")
+	if c.AWS_PARAMETER_REDDIT_CLIENT_ID == "" && c.REDDIT_CLIENT_ID == "" {
+		log.Fatal("REDDIT_CLIENT_ID or AWS_PARAMETER_REDDIT_CLIENT_ID is not set.")
 	}
 
 	if c.REDDIT_CLIENT_ID != "" {
@@ -141,8 +143,8 @@ func (c *Config) GetRedditClientID() (string, error) {
 }
 
 func (c *Config) GetRedditClientSecret() (string, error) {
-	if ConfigFile.AWS_PARAMETER_REDDIT_CLIENT_SECRET == "" && ConfigFile.REDDIT_CLIENT_SECRET == "" {
-		log.Fatal("REDDIT_CLIENT_SECRET or REDDIT_CLIENT_SECRET if not set.")
+	if c.AWS_PARAMETER_REDDIT_CLIENT_SECRET == "" && c.REDDIT_CLIENT_SECRET == "" {
+		log.Fatal("REDDIT_CLIENT_SECRET or REDDIT_CLIENT_SECRET is not set.")
 	}
 
 	if c.REDDIT_CLIENT_SECRET != "" {
@@ -160,4 +162,11 @@ func getAWSParameter(parameterName string) (string, error) {
 		fmt.Println(fmt.Errorf("error from fetching parameter %s. With error: %w", parameterName, err))
 	}
 	return *out.Parameter.Value, err
+}
+
+func (c *Config) GetOpenAIKey() (string, error) {
+	if c.OPENAI_KEY == "" {
+		log.Fatal("OPENAI_KEY is not defined")
+	}
+	return getAWSParameter(c.OPENAI_KEY)
 }
