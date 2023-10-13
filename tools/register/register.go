@@ -39,9 +39,14 @@ func init() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	err = bot.Open()
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func main() {
+	defer bot.Close()
 	if *RemoveCommands {
 		cmds, err := bot.ApplicationCommands(bot.State.User.ID, "")
 		if err != nil {

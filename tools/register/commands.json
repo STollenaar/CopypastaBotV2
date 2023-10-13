@@ -1,13 +1,25 @@
 [
     {
         "name": "browse",
-        "description": "Browse reddit from the confort of discord",
+        "description": "Browse reddit from the comfort of discord",
         "options": [
             {
                 "name": "name",
                 "type": 3,
                 "description": "name of the subreddit",
                 "required": false
+            }
+        ]
+    },
+    {
+        "name": "chat",
+        "description": "Chat with the bot",
+        "options": [
+            {
+                "name": "message",
+                "type": 3,
+                "description": "message for the bot",
+                "required": true
             }
         ]
     },
