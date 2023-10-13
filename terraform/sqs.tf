@@ -12,6 +12,13 @@ resource "aws_sqs_queue" "speak_request" {
   visibility_timeout_seconds = 60 * 10
 }
 
+resource "aws_sqs_queue" "chat_request" {
+  name                       = "chat-request"
+  message_retention_seconds  = 60 * 10
+  receive_wait_time_seconds  = 10
+  visibility_timeout_seconds = 60 * 10
+}
+
 resource "aws_lambda_permission" "sqs_receiver_lambda_invocation" {
   statement_id  = "AllowExecutionFromSQS"
   action        = "lambda:InvokeFunction"
@@ -61,4 +68,26 @@ resource "aws_lambda_event_source_mapping" "speak_receiver_lambda_source" {
   enabled          = true
   function_name    = module.lambda_functions.lambda_functions["speakReceiver"].function_name
   batch_size       = 1
+}
+
+resource "aws_lambda_permission" "chat_receiver_lambda_invocation" {
+  statement_id  = "AllowExecutionFromSQS"
+  action        = "lambda:InvokeFunction"
+  function_name = module.lambda_functions.lambda_functions["chatReceiver"].function_name
+  principal     = "sqs.amazonaws.com"
+
+  source_arn = aws_sqs_queue.chat_request.arn
+}
+
+# Event source from SQS
+resource "aws_lambda_event_source_mapping" "chat_receiver_lambda_source" {
+  event_source_arn = aws_sqs_queue.chat_request.arn
+  enabled          = true
+  function_name    = module.lambda_functions.lambda_functions["chatReceiver"].function_name
+  batch_size       = 1
+}
+
+
+resource "aws_sqs_queue" "speak_interrupt_tmp" {
+  name                       = "speak-interrupt"
 }
