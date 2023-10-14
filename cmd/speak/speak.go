@@ -44,8 +44,8 @@ func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
 	}
 
-	parsedArguments := util.ParseArguments([]string{"redditpost", "url", "user"}, interaction.ApplicationCommandData().Options)
-	if parsedArguments["Redditpost"] == "" && parsedArguments["Url"] == "" && parsedArguments["User"] == "" {
+	parsedArguments := util.ParseArguments([]string{"redditpost", "url", "user", "chat"}, interaction.ApplicationCommandData().Options)
+	if parsedArguments["Redditpost"] == "" && parsedArguments["Url"] == "" && parsedArguments["User"] == "" && parsedArguments["Chat"] == "" {
 		response.Data.Content = "You must provide at least 1 argument"
 		response.Type = discordgo.InteractionResponseChannelMessageWithSource
 	} else {
@@ -60,13 +60,17 @@ func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 		if parsedArguments["Redditpost"] != "" {
 			sqsMessage.Data = parsedArguments["Redditpost"]
 			sqsMessage.Type = "redditpost"
-			destination = util.ConfigFile.AWS_SQS_URL_OTHER
+			destination = util.ConfigFile.AWS_SQS_URL_OTHER[0]
 		} else if parsedArguments["Url"] != "" {
 			sqsMessage.Type = "url"
 			sqsMessage.Data = parsedArguments["Url"]
-		} else {
+		} else if parsedArguments["User"] != "" {
 			sqsMessage.Type = "user"
 			sqsMessage.Data = parsedArguments["User"]
+		} else if parsedArguments["Chat"] != "" {
+			sqsMessage.Type = "chat"
+			sqsMessage.Data = parsedArguments["Chat"]
+			destination = util.ConfigFile.AWS_SQS_URL_OTHER[1]
 		}
 
 		sqsMessageData, _ := json.Marshal(sqsMessage)

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -28,7 +29,7 @@ type Config struct {
 	AWS_PARAMETER_REDDIT_CLIENT_ID     string
 	AWS_PARAMETER_REDDIT_CLIENT_SECRET string
 	AWS_SQS_URL                        string
-	AWS_SQS_URL_OTHER                  string
+	AWS_SQS_URL_OTHER                  []string
 
 	TERMINAL_REGEX string
 	STATISTICS_BOT string
@@ -57,7 +58,7 @@ func init() {
 		DISCORD_TOKEN:                      os.Getenv("DISCORD_TOKEN"),
 		AWS_REGION:                         os.Getenv("AWS_REGION"),
 		AWS_SQS_URL:                        os.Getenv("AWS_SQS_URL"),
-		AWS_SQS_URL_OTHER:                  os.Getenv("AWS_SQS_URL_OTHER"),
+		AWS_SQS_URL_OTHER:                  strings.Split(os.Getenv("AWS_SQS_URL_OTHER"), ";"),
 		AWS_PARAMETER_DISCORD_TOKEN:        os.Getenv("AWS_PARAMETER_DISCORD_TOKEN"),
 		AWS_PARAMETER_PUBLIC_DISCORD_TOKEN: os.Getenv("AWS_PARAMETER_PUBLIC_DISCORD_TOKEN"),
 		AWS_PARAMETER_REDDIT_USERNAME:      os.Getenv("AWS_PARAMETER_REDDIT_USERNAME"),

@@ -7,6 +7,7 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.21.0
 	github.com/aws/aws-sdk-go-v2/config v1.18.40
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.24.5
+	github.com/ayush6624/go-chatgpt v0.3.0
 	github.com/bwmarrin/discordgo v0.27.1
 	github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20230924150725-bbdf152a1528
 	github.com/stollenaar/statisticsbot/util v0.0.0-20230924143446-b8273375c638
@@ -31,7 +32,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.35 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.16.0 // indirect
 	github.com/aws/smithy-go v1.14.2 // indirect
-	github.com/ayush6624/go-chatgpt v0.3.0 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
