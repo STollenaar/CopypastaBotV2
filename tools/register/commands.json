@@ -84,6 +84,12 @@
                 "type": 3,
                 "description": "Reddit post id",
                 "required": false
+            },
+            {
+                "name": "chat",
+                "type": 3,
+                "description": "Chat message for the copypastabot",
+                "required": false
             }
         ]
     }
