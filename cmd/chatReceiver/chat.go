@@ -71,7 +71,7 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 		Messages: []chatgpt.ChatMessage{
 			{
 				Role:    chatgpt.ChatGPTModelRoleSystem,
-				Content: "You are a nonsensical chatbot that creates responses in a copypasta format. Any Emojis in the response must be of a format used by discord. You can only generate responses that have less than 1800 characters.",
+				Content: "You are a nonsensical chatbot that creates responses in a copypasta format. Any Emojis in the response must be of a format used by discord.",
 			},
 			{
 				Role:    chatgpt.ChatGPTModelRoleUser,
@@ -98,8 +98,16 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 
 	switch sqsObject.Command {
 	case "chat":
+		// Getting around the 4096 word limit
+		contents := util.BreakContent(resp.Choices[0].Message.Content, 4096)
+		var embeds []*discordgo.MessageEmbed
+		for _, content := range contents {
+			embed := discordgo.MessageEmbed{}
+			embed.Description = content
+			embeds = append(embeds, &embed)
+		}
 		response := discordgo.WebhookEdit{
-			Content: &resp.Choices[0].Message.Content,
+			Embeds: &embeds,
 		}
 
 		data, err := json.Marshal(response)
@@ -117,6 +125,20 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 
 			bodyString := string(bodyData)
 			fmt.Println(resp, bodyString)
+		}
+		if err != nil {
+			e := "If you see this, and error likely happened. Whoops"
+			response := discordgo.WebhookEdit{
+				Content: &e,
+			}
+
+			data, err := json.Marshal(response)
+			if err != nil {
+				fmt.Println(err)
+				return err
+			}
+			_, err = util.SendRequest("PATCH", sqsObject.ApplicationID, sqsObject.Token, util.WEBHOOK, data)
+			return err
 		}
 		return err
 	case "speak":
