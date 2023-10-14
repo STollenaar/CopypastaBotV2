@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -19,6 +20,9 @@ import (
 )
 
 var (
+	//go:embed chatRole.txt
+	systemPrompt     string
+
 	chatGPTClient *chatgpt.Client
 	sqsClient     *sqs.Client
 	sendTimeout   = true
@@ -38,6 +42,7 @@ func init() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	chatGPTClient, err = chatgpt.NewClient(openAIKey)
 	if err != nil {
 		log.Fatal(err)
@@ -71,7 +76,7 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 		Messages: []chatgpt.ChatMessage{
 			{
 				Role:    chatgpt.ChatGPTModelRoleSystem,
-				Content: "You are a nonsensical chatbot that creates responses in a copypasta format. Any Emojis in the response must be of a format used by discord.",
+				Content: systemPrompt,
 			},
 			{
 				Role:    chatgpt.ChatGPTModelRoleUser,
@@ -108,6 +113,10 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 		}
 		response := discordgo.WebhookEdit{
 			Embeds: &embeds,
+			AllowedMentions: &discordgo.MessageAllowedMentions{
+				Users: []string{},
+				Roles: []string{},
+			},
 		}
 
 		data, err := json.Marshal(response)
