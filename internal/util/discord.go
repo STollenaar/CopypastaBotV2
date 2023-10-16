@@ -4,8 +4,12 @@ import (
 	"bytes"
 	"crypto/ed25519"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"github.com/bwmarrin/discordgo"
+	statsUtil "github.com/stollenaar/statisticsbot/util"
 )
 
 type KIND string
@@ -19,6 +23,19 @@ const (
 	WEBHOOK_POST_URL = "https://discord.com/api/v10/webhooks/%s/%s"
 	PATCH_URL        = "https://discord.com/api/v10/webhooks/%s/%s/messages/%s"
 )
+
+func SendError(sqsObject statsUtil.SQSObject) {
+	e := "If you see this, and error likely happened. Whoops"
+	response := discordgo.WebhookEdit{
+		Content: &e,
+	}
+
+	data, err := json.Marshal(response)
+	if err != nil {
+		fmt.Println(err)
+	}
+	SendRequest("PATCH", sqsObject.ApplicationID, sqsObject.Token, WEBHOOK, data)
+}
 
 func SendRequest(method, interactionID, interactionToken string, kind KIND, data []byte, messageID ...string) (*http.Response, error) {
 	url := API_URL

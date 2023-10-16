@@ -21,7 +21,9 @@ import (
 
 var (
 	//go:embed chatRole.txt
-	systemPrompt     string
+	systemPrompt string
+	//go:embed chatRoleSpeak.txt
+	systemPromptSpeak string
 
 	chatGPTClient *chatgpt.Client
 	sqsClient     *sqs.Client
@@ -70,13 +72,24 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 		fmt.Println(err)
 		return err
 	}
+	message, err := util.GetMessageObject(sqsObject)
+	if err != nil {
+		fmt.Println(err)
+		util.SendError(sqsObject)
+		return err
+	}
+	prompt := systemPrompt
+	if sqsObject.Command == "speak" {
+		prompt = systemPromptSpeak
+	}
 
 	resp, err := chatGPTClient.Send(context.TODO(), &chatgpt.ChatCompletionRequest{
 		Model: chatgpt.GPT35Turbo,
+		User:  message.Interaction.User.ID,
 		Messages: []chatgpt.ChatMessage{
 			{
 				Role:    chatgpt.ChatGPTModelRoleSystem,
-				Content: systemPrompt,
+				Content: prompt,
 			},
 			{
 				Role:    chatgpt.ChatGPTModelRoleUser,
@@ -136,17 +149,7 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 			fmt.Println(resp, bodyString)
 		}
 		if err != nil {
-			e := "If you see this, and error likely happened. Whoops"
-			response := discordgo.WebhookEdit{
-				Content: &e,
-			}
-
-			data, err := json.Marshal(response)
-			if err != nil {
-				fmt.Println(err)
-				return err
-			}
-			_, err = util.SendRequest("PATCH", sqsObject.ApplicationID, sqsObject.Token, util.WEBHOOK, data)
+			util.SendError(sqsObject)
 			return err
 		}
 		return err
