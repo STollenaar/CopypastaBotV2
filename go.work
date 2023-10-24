@@ -1,0 +1,19 @@
+go 1.21.1
+
+use (
+	./cmd/browse
+	./cmd/browseReceiver
+	./cmd/chat
+	./cmd/chatReceiver
+	./cmd/markov
+	./cmd/pasta
+	./cmd/ping
+	./cmd/router
+	./cmd/speak
+	./cmd/speakInterrupt
+	./cmd/speakReceiver
+	./cmd/sqsReceiver
+	./internal/util
+	./pkg/markov
+	./tools/register
+)

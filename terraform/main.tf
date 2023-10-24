@@ -17,91 +17,200 @@ terraform {
   }
   required_version = ">= 1.0.0"
 }
-
-locals {
-  name         = "copypastabot"
-  used_profile = data.awsprofiler_list.list_profiles.profiles[try(index(data.awsprofiler_list.list_profiles.profiles.*.name, "personal"), 0)]
-}
-
-
 provider "aws" {
   profile = local.used_profile.name
 }
 
-resource "aws_ecs_service" "copypastaBot_service" {
-  name            = local.name
-  cluster         = data.terraform_remote_state.discord_bots_cluster.outputs.discord_bots_cluster.id
-  task_definition = aws_ecs_task_definition.copypastaBot_service.arn
-  desired_count   = 1
+locals {
+  name         = "copypastabot"
+  used_profile = data.awsprofiler_list.list_profiles.profiles[try(index(data.awsprofiler_list.list_profiles.profiles.*.name, "personal"), 0)]
 
-  capacity_provider_strategy {
-    capacity_provider = data.terraform_remote_state.discord_bots_cluster.outputs.discord_bots_capacity_providers[0].name
-    weight            = 100
-  }
-
-  service_connect_configuration {
-    enabled   = true
-    namespace = data.terraform_remote_state.discord_bots_cluster.outputs.discord_bots_namespace.arn
-  }
-
-
-  deployment_circuit_breaker {
-    enable   = true
-    rollback = true
-  }
-}
-
-resource "aws_ecs_task_definition" "copypastaBot_service" {
-  family                   = local.name
-  requires_compatibilities = ["EC2"]
-  execution_role_arn       = data.terraform_remote_state.discord_bots_cluster.outputs.spices_role.arn
-
-  cpu          = 256
-  memory       = 400
-  network_mode = "bridge"
-
-  runtime_platform {
-    cpu_architecture        = "ARM64"
-    operating_system_family = "LINUX"
-  }
-  container_definitions = jsonencode([
-    {
-      name      = local.name
-      image     = "${data.terraform_remote_state.discord_bots_cluster.outputs.discord_bots_repo.repository_url}:${local.name}-latest-arm64"
-      cpu       = 256
-      memory    = 400
-      essential = true
-
-      environment = [
-        {
-          name  = "AWS_REGION"
-          value = data.aws_region.current.name
-        },
-        {
-          name  = "AWS_PARAMETER_NAME"
-          value = "/discord_tokens/${local.name}"
-        },
-        {
-          name  = "AWS_PARAMETER_REDDIT_USERNAME"
-          value = "/reddit/username"
-        },
-        {
-          name  = "AWS_PARAMETER_REDDIT_PASSWORD"
-          value = "/reddit/password"
-        },
-        {
-          name  = "AWS_PARAMETER_REDDIT_CLIENT_ID"
-          value = "/reddit/client_id"
-        },
-        {
-          name  = "AWS_PARAMETER_REDDIT_CLIENT_SECRET"
-          value = "/reddit/client_secret"
-        },
-        {
-          name  = "STATSBOT_URL"
-          value = "statisticsbot"
-        },
-      ]
+  functions = {
+    browse = {
+      description                    = "Browse command for CopypastaBot"
+      enable_alarm                   = false
+      runtime                        = "provided.al2"
+      handler                        = "bootstrap"
+      timeout                        = 3
+      memory_size                    = 128
+      layers                         = []
+      reserved_concurrent_executions = -1
+      extra_permissions              = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.browse_sqs_role_policy_document.json]
+      environment_variables = {
+        AWS_SQS_URL = aws_sqs_queue.browse_request.url
+      }
     }
-  ])
+    browseReceiver = {
+      description                    = "browseReceiver for CopypastaBot"
+      enable_alarm                   = false
+      runtime                        = "provided.al2"
+      handler                        = "bootstrap"
+      timeout                        = 60 * 2
+      memory_size                    = 128
+      layers                         = []
+      reserved_concurrent_executions = -1
+      extra_permissions              = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.browse_sqs_role_policy_document.json]
+      environment_variables = {
+        AWS_PARAMETER_REDDIT_USERNAME      = "/reddit/username"
+        AWS_PARAMETER_REDDIT_PASSWORD      = "/reddit/password"
+        AWS_PARAMETER_REDDIT_CLIENT_ID     = "/reddit/client_id"
+        AWS_PARAMETER_REDDIT_CLIENT_SECRET = "/reddit/client_secret"
+      }
+    }
+    chat = {
+      description                    = "Chat command for CopypastaBot"
+      enable_alarm                   = false
+      runtime                        = "provided.al2"
+      handler                        = "bootstrap"
+      timeout                        = 3
+      memory_size                    = 128
+      layers                         = []
+      reserved_concurrent_executions = -1
+      extra_permissions              = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.chat_sqs_role_policy_document.json]
+      environment_variables = {
+        AWS_SQS_URL = aws_sqs_queue.chat_request.url
+      }
+    }
+    chatReceiver = {
+      description                    = "Chat receiver for CopypastaBot"
+      enable_alarm                   = false
+      runtime                        = "provided.al2"
+      handler                        = "bootstrap"
+      timeout                        = 60 * 5
+      memory_size                    = 128
+      layers                         = []
+      reserved_concurrent_executions = -1
+      extra_permissions              = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.chat_sqs_role_policy_document.json, data.aws_iam_policy_document.speak_sqs_role_policy_document.json]
+      environment_variables = {
+        OPENAI_KEY  = "/openai/api_key"
+        AWS_SQS_URL = aws_sqs_queue.speak_request.url
+      }
+    }
+    markov = {
+      description                    = "Markov command for CopypastaBot"
+      enable_alarm                   = false
+      runtime                        = "provided.al2"
+      handler                        = "bootstrap"
+      timeout                        = 3
+      memory_size                    = 128
+      layers                         = []
+      reserved_concurrent_executions = -1
+      extra_permissions              = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.sqs_role_policy_document.json]
+      environment_variables = {
+        AWS_SQS_URL = data.terraform_remote_state.statisticsbot.outputs.sqs.request.url
+      }
+    }
+    pasta = {
+      description                    = "Pasta command for CopypastaBot"
+      enable_alarm                   = false
+      runtime                        = "provided.al2"
+      handler                        = "bootstrap"
+      timeout                        = 3
+      memory_size                    = 128
+      layers                         = []
+      reserved_concurrent_executions = -1
+      extra_permissions              = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json]
+      environment_variables = {
+        AWS_PARAMETER_REDDIT_USERNAME      = "/reddit/username"
+        AWS_PARAMETER_REDDIT_PASSWORD      = "/reddit/password"
+        AWS_PARAMETER_REDDIT_CLIENT_ID     = "/reddit/client_id"
+        AWS_PARAMETER_REDDIT_CLIENT_SECRET = "/reddit/client_secret"
+      }
+    }
+    ping = {
+      description                    = "Ping command for CopypastaBot"
+      enable_alarm                   = false
+      runtime                        = "provided.al2"
+      handler                        = "bootstrap"
+      timeout                        = 3
+      memory_size                    = 128
+      layers                         = []
+      reserved_concurrent_executions = -1
+      extra_permissions              = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json]
+      environment_variables          = {}
+    }
+    sqsReceiver = {
+      description                    = "sqs receiver for CopypastaBot"
+      enable_alarm                   = false
+      runtime                        = "provided.al2"
+      handler                        = "bootstrap"
+      timeout                        = 60 * 5
+      memory_size                    = 2048
+      layers                         = []
+      reserved_concurrent_executions = -1
+      extra_permissions              = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.sqs_role_policy_document.json, data.aws_iam_policy_document.speak_sqs_role_policy_document.json]
+      environment_variables = {
+        AWS_SQS_URL = aws_sqs_queue.speak_request.url
+      }
+    }
+    router = {
+      description                    = "Router lambda to handle all commands correctly"
+      enable_alarm                   = false
+      runtime                        = "provided.al2"
+      handler                        = "bootstrap"
+      timeout                        = 5
+      memory_size                    = 128
+      layers                         = []
+      reserved_concurrent_executions = -1
+      extra_permissions              = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.lambda_execution_invocation_document.json, data.aws_iam_policy_document.browse_sqs_role_policy_document.json]
+      environment_variables = {
+        AWS_PARAMETER_PUBLIC_DISCORD_TOKEN = "/discord_tokens/${local.name}_public",
+        AWS_SQS_URL                        = aws_sqs_queue.browse_request.url
+      }
+    }
+    speak = {
+      description                    = "Speak command for CopypastaBot"
+      enable_alarm                   = false
+      runtime                        = "provided.al2"
+      handler                        = "bootstrap"
+      timeout                        = 3
+      memory_size                    = 128
+      layers                         = []
+      reserved_concurrent_executions = -1
+      extra_permissions              = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.sqs_role_policy_document.json, data.aws_iam_policy_document.speak_sqs_role_policy_document.json, data.aws_iam_policy_document.chat_sqs_role_policy_document.json]
+      environment_variables = {
+        AWS_SQS_URL       = data.terraform_remote_state.statisticsbot.outputs.sqs.request.url
+        AWS_SQS_URL_OTHER = "${aws_sqs_queue.speak_request.url};${aws_sqs_queue.chat_request.url}"
+      }
+    }
+    speakInterrupt = {
+      description                    = "Speak Interrupt for CopypastaBot"
+      enable_alarm                   = false
+      runtime                        = "provided.al2"
+      handler                        = "bootstrap"
+      timeout                        = 60 * 10
+      memory_size                    = 512
+      layers                         = []
+      reserved_concurrent_executions = -1
+      extra_permissions              = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.speak_interrupt_sqs_role_policy_document.json]
+      environment_variables = {
+        AWS_PARAMETER_DISCORD_TOKEN = "/discord_tokens/${local.name}"
+        AWS_SQS_URL                 = aws_sqs_queue.speak_interrupt_tmp.url
+      }
+    }
+    speakReceiver = {
+      description                    = "Speak Receiver for CopypastaBot"
+      enable_alarm                   = false
+      runtime                        = "provided.al2"
+      handler                        = "bootstrap"
+      timeout                        = 60 * 10
+      memory_size                    = 512
+      layers                         = [data.aws_lambda_layer_version.ffmpeg_layer.arn]
+      reserved_concurrent_executions = 1
+      extra_permissions              = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.speak_sqs_role_policy_document.json, data.aws_iam_policy_document.polly_role_policy_document.json]
+      environment_variables = {
+        AWS_PARAMETER_DISCORD_TOKEN        = "/discord_tokens/${local.name}"
+        AWS_PARAMETER_REDDIT_USERNAME      = "/reddit/username"
+        AWS_PARAMETER_REDDIT_PASSWORD      = "/reddit/password"
+        AWS_PARAMETER_REDDIT_CLIENT_ID     = "/reddit/client_id"
+        AWS_PARAMETER_REDDIT_CLIENT_SECRET = "/reddit/client_secret"
+      }
+    }
+  }
 }
+
+module "lambda_functions" {
+  source    = "./templates/lambda"
+  functions = local.functions
+}
+

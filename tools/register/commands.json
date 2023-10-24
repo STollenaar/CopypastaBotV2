@@ -1,0 +1,96 @@
+[
+    {
+        "name": "browse",
+        "description": "Browse reddit from the comfort of discord",
+        "options": [
+            {
+                "name": "name",
+                "type": 3,
+                "description": "name of the subreddit",
+                "required": false
+            }
+        ]
+    },
+    {
+        "name": "chat",
+        "description": "Chat with the bot",
+        "options": [
+            {
+                "name": "message",
+                "type": 3,
+                "description": "message for the bot",
+                "required": true
+            }
+        ]
+    },
+    {
+        "name": "ping",
+        "description": "Pong"
+    },
+    {
+        "name": "pasta",
+        "description": "Post a reddit post with an url or post id",
+        "options": [
+            {
+                "name": "url",
+                "type": 3,
+                "description": "URL of the reddit post",
+                "required": false
+            },
+            {
+                "name": "postid",
+                "type": 3,
+                "description": "The Reddit postID of the post",
+                "required": false
+            }
+        ]
+    },
+    {
+        "name": "markov",
+        "description": "Imitate someone or from a reddit post with some weird results",
+        "options": [
+            {
+                "name": "url",
+                "type": 3,
+                "description": "URL of the page to make a markov chain from",
+                "required": false
+            },
+            {
+                "name": "user",
+                "type": 3,
+                "description": "User to create a markov chain of",
+                "required": false
+            }
+        ]
+    },
+    {
+        "name": "speak",
+        "description": "Imitate someone or from a reddit post with some weird results, and listen to the beauty",
+        "options": [
+            {
+                "name": "url",
+                "type": 3,
+                "description": "URL of the page to make a markov chain from",
+                "required": false
+            },
+            {
+                "name": "user",
+                "type": 3,
+                "description": "User to create a markov chain of",
+                "required": false
+            },
+            {
+                "name": "redditpost",
+                "type": 3,
+                "description": "Reddit post id",
+                "required": false
+            },
+            {
+                "name": "chat",
+                "type": 3,
+                "description": "Chat message for the copypastabot",
+                "required": false
+            }
+        ]
+    }
+]
