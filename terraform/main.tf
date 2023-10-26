@@ -182,7 +182,7 @@ locals {
       memory_size                    = 512
       layers                         = []
       reserved_concurrent_executions = -1
-      extra_permissions              = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.sqs_role_policy_document.json, data.aws_iam_policy_document.speak_interrupt_sqs_role_policy_document.json]
+      extra_permissions              = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.sqs_role_policy_document.json]
       environment_variables = {
         DEBUG_GUILD                 = "544911814886948865"
         AWS_PARAMETER_DISCORD_TOKEN = "/discord_tokens/${local.name}"

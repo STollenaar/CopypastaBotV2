@@ -86,8 +86,3 @@ resource "aws_lambda_event_source_mapping" "chat_receiver_lambda_source" {
   function_name    = module.lambda_functions.lambda_functions["chatReceiver"].function_name
   batch_size       = 1
 }
-
-
-resource "aws_sqs_queue" "speak_interrupt_tmp" {
-  name                       = "speak-interrupt"
-}

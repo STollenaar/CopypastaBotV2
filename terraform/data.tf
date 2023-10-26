@@ -128,24 +128,6 @@ data "aws_iam_policy_document" "chat_sqs_role_policy_document" {
 }
 
 # IAM policy document for the container to access the sqs queue
-data "aws_iam_policy_document" "speak_interrupt_sqs_role_policy_document" {
-  statement {
-    sid    = "SQSSpeakSendMessage"
-    effect = "Allow"
-    actions = [
-      "sqs:DeleteMessage",
-      "sqs:GetQueueAttributes",
-      "sqs:GetQueueUrl",
-      "sqs:ReceiveMessage",
-      "sqs:SendMessage",
-    ]
-    resources = [
-      aws_sqs_queue.speak_interrupt_tmp.arn
-    ]
-  }
-}
-
-# IAM policy document for the container to access the sqs queue
 data "aws_iam_policy_document" "polly_role_policy_document" {
   statement {
     sid    = "PollySynthSpeech"
