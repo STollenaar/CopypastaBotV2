@@ -223,7 +223,7 @@ resource "aws_scheduler_schedule" "example" {
     mode = "OFF"
   }
 
-  schedule_expression = "rate(1 hours)"
+  schedule_expression = "cron(0 * ? * * *)"
 
   target {
     arn      = module.lambda_functions.lambda_functions["speakInterrupt"].arn
