@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -38,7 +39,8 @@ func main() {
 
 func timeoutHandler() {
 	if sendTimeout {
-		d := "If you see this, and error likely happened. Whoops"
+		lsm := os.Getenv("LogStreamName")
+		d := fmt.Sprintf("If you see this, and error likely happened. Give this to the distinguished Copypastabot Engineer: %s", lsm)
 		response := discordgo.WebhookEdit{
 			Content: &d,
 		}
@@ -54,7 +56,7 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 		fmt.Println(err)
 		return err
 	}
-	if sqsObject.Command == "speak" {
+	if sqsObject.Command == "speak" && sqsObject.Token != "" {
 		d := "Data received, building Markov"
 		response := discordgo.WebhookEdit{
 			Content: &d,
@@ -126,7 +128,7 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 			MessageBody: aws.String(string(sqsMessageData)),
 			QueueUrl:    aws.String(util.ConfigFile.AWS_SQS_URL),
 		})
-		if err != nil {
+		if err != nil && sqsObject.Token != "" {
 			sendTimeout = false
 			fmt.Println(err)
 			resp, err := util.SendRequest("PATCH", sqsObject.ApplicationID, sqsObject.Token, util.WEBHOOK, []byte(err.Error()))

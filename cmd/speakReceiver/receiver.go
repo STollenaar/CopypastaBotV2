@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -84,28 +83,16 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 
 // Command create a tts experience for the generated markov
 func synthData(object statsUtil.SQSObject) error {
-	resp, err := util.SendRequest("GET", object.ApplicationID, object.Token, util.WEBHOOK, []byte{})
-	var bodyString string
-	if resp != nil {
-		buf := new(bytes.Buffer)
-		buf.ReadFrom(resp.Body)
-		bodyData := buf.String()
-
-		bodyString = string(bodyData)
-		fmt.Println(resp, bodyString)
-	}
+	message, err := util.GetMessageObject(object)
 	if err != nil {
-		return fmt.Errorf("error sending request %v", err)
+		fmt.Println(err)
+		util.SendError(object)
+		return err
 	}
+
 	if object.Type == "redditpost" {
 		post := util.GetRedditPost(object.Data)
 		object.Data = post.Post.Body
-	}
-
-	var message discordgo.Message
-	err = json.Unmarshal([]byte(bodyString), &message)
-	if err != nil {
-		return fmt.Errorf("error parsing into interaction with data: %s, and error: %v", bodyString, err)
 	}
 
 	contents := util.BreakContent(object.Data, 2950)

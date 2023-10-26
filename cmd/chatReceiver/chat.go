@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -25,6 +26,7 @@ var (
 	//go:embed chatRoleSpeak.txt
 	systemPromptSpeak string
 
+	contextID     string
 	chatGPTClient *chatgpt.Client
 	sqsClient     *sqs.Client
 	sendTimeout   = true
@@ -57,7 +59,8 @@ func main() {
 
 func timeoutHandler() {
 	if sendTimeout {
-		d := "If you see this, and error likely happened. Whoops"
+		lsm := os.Getenv("LogStreamName")
+		d := fmt.Sprintf("If you see this, and error likely happened. Give this to the distinguished Copypastabot Engineer: %s", lsm)
 		response := discordgo.WebhookEdit{
 			Content: &d,
 		}
