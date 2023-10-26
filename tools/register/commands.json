@@ -19,6 +19,7 @@
                 "name": "message",
                 "type": 3,
                 "description": "message for the bot",
+                "max_length": 4000,
                 "required": true
             }
         ]
