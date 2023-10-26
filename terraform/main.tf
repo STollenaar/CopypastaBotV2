@@ -182,10 +182,11 @@ locals {
       memory_size                    = 512
       layers                         = []
       reserved_concurrent_executions = -1
-      extra_permissions              = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.speak_interrupt_sqs_role_policy_document.json]
+      extra_permissions              = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.sqs_role_policy_document.json, data.aws_iam_policy_document.speak_interrupt_sqs_role_policy_document.json]
       environment_variables = {
+        DEBUG_GUILD                 = "544911814886948865"
         AWS_PARAMETER_DISCORD_TOKEN = "/discord_tokens/${local.name}"
-        AWS_SQS_URL                 = aws_sqs_queue.speak_interrupt_tmp.url
+        AWS_SQS_URL                 = data.terraform_remote_state.statisticsbot.outputs.sqs.request.url
       }
     }
     speakReceiver = {
@@ -212,5 +213,21 @@ locals {
 module "lambda_functions" {
   source    = "./templates/lambda"
   functions = local.functions
+}
+
+resource "aws_scheduler_schedule" "example" {
+  name       = "speak-interrupt"
+  group_name = "default"
+
+  flexible_time_window {
+    mode = "OFF"
+  }
+
+  schedule_expression = "rate(1 hours)"
+
+  target {
+    arn      = module.lambda_functions.lambda_functions["speakInterrupt"].arn
+    role_arn = aws_iam_role.scheduler.arn
+  }
 }
 

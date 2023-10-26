@@ -173,3 +173,13 @@ data "aws_iam_policy_document" "lambda_execution_invocation_document" {
     ]
   }
 }
+
+data "aws_iam_policy_document" "event_bridge_execution_role_document" {
+  statement {
+    actions = ["sts:AssumeRole"]
+    principals {
+      type        = "Service"
+      identifiers = ["scheduler.amazonaws.com"]
+    }
+  }
+}

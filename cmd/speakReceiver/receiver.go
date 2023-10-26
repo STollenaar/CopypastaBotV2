@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/stollenaar/copypastabotv2/internal/util"
@@ -85,9 +86,17 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 func synthData(object statsUtil.SQSObject) error {
 	message, err := util.GetMessageObject(object)
 	if err != nil {
-		fmt.Println(err)
-		util.SendError(object)
-		return err
+		if err.Error() == "object token is a snowflake" {
+			message.Interaction = &discordgo.MessageInteraction{
+				User: &discordgo.User{
+					ID: object.Token,
+				},
+			}
+		} else {
+			fmt.Println(err)
+			util.SendError(object)
+			return err
+		}
 	}
 
 	if object.Type == "redditpost" {
@@ -139,9 +148,10 @@ func doSpeech() error {
 		Content: &d,
 	}
 	data, _ := json.Marshal(response)
-	util.SendRequest("PATCH", currentSpeech.sqsObject.ApplicationID, currentSpeech.sqsObject.Token, util.WEBHOOK, data)
-	defer util.SendRequest("DELETE", currentSpeech.sqsObject.ApplicationID, currentSpeech.sqsObject.Token, util.WEBHOOK, data)
-
+	if _, snerr := strconv.Atoi(currentSpeech.sqsObject.Token); snerr != nil {
+		util.SendRequest("PATCH", currentSpeech.sqsObject.ApplicationID, currentSpeech.sqsObject.Token, util.WEBHOOK, data)
+		defer util.SendRequest("DELETE", currentSpeech.sqsObject.ApplicationID, currentSpeech.sqsObject.Token, util.WEBHOOK, data)
+	}
 	vs, err := bot.State.VoiceState(currentSpeech.sqsObject.GuildID, currentSpeech.userID)
 	if err != nil {
 		return fmt.Errorf("error finding voice state: %v", err)

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -56,7 +57,7 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 		fmt.Println(err)
 		return err
 	}
-	if sqsObject.Command == "speak" && sqsObject.Token != "" {
+	if _, snerr := strconv.Atoi(sqsObject.Token); snerr != nil && sqsObject.Command == "speak" {
 		d := "Data received, building Markov"
 		response := discordgo.WebhookEdit{
 			Content: &d,
@@ -128,7 +129,7 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 			MessageBody: aws.String(string(sqsMessageData)),
 			QueueUrl:    aws.String(util.ConfigFile.AWS_SQS_URL),
 		})
-		if err != nil && sqsObject.Token != "" {
+		if _, snerr := strconv.Atoi(sqsObject.Token); snerr != nil && err != nil {
 			sendTimeout = false
 			fmt.Println(err)
 			resp, err := util.SendRequest("PATCH", sqsObject.ApplicationID, sqsObject.Token, util.WEBHOOK, []byte(err.Error()))

@@ -3,7 +3,9 @@ package util
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/bwmarrin/discordgo"
 	statsUtil "github.com/stollenaar/statisticsbot/util"
@@ -20,6 +22,9 @@ type MessageObject struct {
 }
 
 func GetMessageObject(object statsUtil.SQSObject) (discordgo.Message, error) {
+	if _, err := strconv.Atoi(object.Token); err == nil {
+		return discordgo.Message{}, errors.New("object token is a snowflake")
+	}
 	resp, err := SendRequest("GET", object.ApplicationID, object.Token, WEBHOOK, []byte{})
 	var bodyString string
 	if resp != nil {
