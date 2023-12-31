@@ -25,6 +25,10 @@
         ]
     },
     {
+        "name": "respond",
+        "type": 3
+    },
+    {
         "name": "ping",
         "description": "Pong"
     },

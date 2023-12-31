@@ -135,6 +135,33 @@ func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 			} else {
 				json.Unmarshal(out.Payload, &apiResponse)
 			}
+		case "respond":
+			messageData := interaction.Data.(discordgo.ApplicationCommandInteractionData).Resolved.Messages[interaction.Data.(discordgo.ApplicationCommandInteractionData).TargetID].Content
+			appData := interaction.ApplicationCommandData()
+			appData.Options = append(appData.Options, &discordgo.ApplicationCommandInteractionDataOption{
+				Name:  "message",
+				Type:  3,
+				Value: messageData,
+			})
+			interaction.Data = appData
+			iData, err := json.Marshal(interaction)
+			if err != nil {
+				apiResponse.Body = err.Error()
+			}
+			req.Body = string(iData)
+			d, err := json.Marshal(req)
+			if err != nil {
+				apiResponse.Body = err.Error()
+			}
+			out, err := lambdaClient.Invoke(context.TODO(), &lambdaService.InvokeInput{
+				FunctionName: aws.String("chat"),
+				Payload:      d,
+			})
+			if err != nil {
+				apiResponse.Body = err.Error()
+			} else {
+				json.Unmarshal(out.Payload, &apiResponse)
+			}
 		case "speak":
 			out, err := lambdaClient.Invoke(context.TODO(), &lambdaService.InvokeInput{
 				FunctionName: aws.String("speak"),
