@@ -136,25 +136,37 @@ func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 				json.Unmarshal(out.Payload, &apiResponse)
 			}
 		case "respond":
-			messageData := interaction.Data.(discordgo.ApplicationCommandInteractionData).Resolved.Messages[interaction.Data.(discordgo.ApplicationCommandInteractionData).TargetID].Content
-			appData := interaction.ApplicationCommandData()
-			appData.Options = append(appData.Options, &discordgo.ApplicationCommandInteractionDataOption{
-				Name:  "message",
-				Type:  3,
-				Value: messageData,
-			})
-			interaction.Data = appData
-			iData, err := json.Marshal(interaction)
+			body, err := extractMessageData(interaction)
 			if err != nil {
 				apiResponse.Body = err.Error()
 			}
-			req.Body = string(iData)
+			req.Body = body
 			d, err := json.Marshal(req)
 			if err != nil {
 				apiResponse.Body = err.Error()
 			}
 			out, err := lambdaClient.Invoke(context.TODO(), &lambdaService.InvokeInput{
 				FunctionName: aws.String("chat"),
+				Payload:      d,
+			})
+			if err != nil {
+				apiResponse.Body = err.Error()
+			} else {
+				json.Unmarshal(out.Payload, &apiResponse)
+			}
+		case "respond-vc":
+			body, err := extractMessageData(interaction)
+			if err != nil {
+				apiResponse.Body = err.Error()
+			}
+			req.Body = body
+			d, err := json.Marshal(req)
+			if err != nil {
+				apiResponse.Body = err.Error()
+			}
+
+			out, err := lambdaClient.Invoke(context.TODO(), &lambdaService.InvokeInput{
+				FunctionName: aws.String("speak"),
 				Payload:      d,
 			})
 			if err != nil {
@@ -188,4 +200,20 @@ func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 	}
 	fmt.Printf("APIResponse: %v\n", apiResponse)
 	return apiResponse, nil
+}
+
+func extractMessageData(interaction discordgo.Interaction) (string, error) {
+	messageData := interaction.Data.(discordgo.ApplicationCommandInteractionData).Resolved.Messages[interaction.Data.(discordgo.ApplicationCommandInteractionData).TargetID].Content
+	appData := interaction.ApplicationCommandData()
+	appData.Options = append(appData.Options, &discordgo.ApplicationCommandInteractionDataOption{
+		Name:  "chat",
+		Type:  3,
+		Value: messageData,
+	})
+	interaction.Data = appData
+	iData, err := json.Marshal(interaction)
+	if err != nil {
+		return "", err
+	}
+	return string(iData), nil
 }
