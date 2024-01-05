@@ -52,7 +52,7 @@ func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 		destination := util.ConfigFile.AWS_SQS_URL
 		sqsMessage := statsUtil.SQSObject{
 			Token:         interaction.Token,
-			Command:       "speak",
+			Command:       interaction.ApplicationCommandData().Name,
 			GuildID:       interaction.GuildID,
 			ApplicationID: interaction.AppID,
 		}

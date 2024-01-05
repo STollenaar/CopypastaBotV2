@@ -25,6 +25,8 @@ var (
 	systemPrompt string
 	//go:embed chatRoleSpeak.txt
 	systemPromptSpeak string
+	//go:embed cavemanRole.txt
+	systemCaveman string
 
 	contextID     string
 	chatGPTClient *chatgpt.Client
@@ -81,8 +83,15 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 		util.SendError(sqsObject)
 		return err
 	}
-	prompt := systemPrompt
-	if sqsObject.Command == "speak" {
+	var prompt string
+	switch sqsObject.Command {
+	case "caveman":
+		prompt = systemCaveman
+	case "caveman-vc":
+		prompt = systemCaveman
+	case "chat":
+		prompt = systemPrompt
+	case "speak":
 		prompt = systemPromptSpeak
 	}
 
@@ -118,6 +127,8 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 	}
 
 	switch sqsObject.Command {
+	case "caveman":
+		fallthrough
 	case "chat":
 		// Getting around the 4096 word limit
 		contents := util.BreakContent(resp.Choices[0].Message.Content, 4096)
@@ -156,6 +167,8 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 			return err
 		}
 		return err
+	case "caveman-vc":
+		fallthrough
 	case "speak":
 		sqsObject.Data = resp.Choices[0].Message.Content
 		sqsMessageData, _ := json.Marshal(sqsObject)

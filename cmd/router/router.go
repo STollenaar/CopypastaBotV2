@@ -95,6 +95,19 @@ func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 			} else {
 				json.Unmarshal(out.Payload, &apiResponse)
 			}
+		case "caveman":
+			fallthrough
+		case "respond":
+			body, err := extractMessageData("message", interaction)
+			if err != nil {
+				apiResponse.Body = err.Error()
+			}
+			req.Body = body
+			d, err = json.Marshal(req)
+			if err != nil {
+				apiResponse.Body = err.Error()
+			}
+			fallthrough
 		case "chat":
 			out, err := lambdaClient.Invoke(context.TODO(), &lambdaService.InvokeInput{
 				FunctionName: aws.String("chat"),
@@ -135,45 +148,19 @@ func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 			} else {
 				json.Unmarshal(out.Payload, &apiResponse)
 			}
-		case "respond":
-			body, err := extractMessageData(interaction)
-			if err != nil {
-				apiResponse.Body = err.Error()
-			}
-			req.Body = body
-			d, err := json.Marshal(req)
-			if err != nil {
-				apiResponse.Body = err.Error()
-			}
-			out, err := lambdaClient.Invoke(context.TODO(), &lambdaService.InvokeInput{
-				FunctionName: aws.String("chat"),
-				Payload:      d,
-			})
-			if err != nil {
-				apiResponse.Body = err.Error()
-			} else {
-				json.Unmarshal(out.Payload, &apiResponse)
-			}
+		case "caveman-vc":
+			fallthrough
 		case "respond-vc":
-			body, err := extractMessageData(interaction)
+			body, err := extractMessageData("chat", interaction)
 			if err != nil {
 				apiResponse.Body = err.Error()
 			}
 			req.Body = body
-			d, err := json.Marshal(req)
+			d, err = json.Marshal(req)
 			if err != nil {
 				apiResponse.Body = err.Error()
 			}
-
-			out, err := lambdaClient.Invoke(context.TODO(), &lambdaService.InvokeInput{
-				FunctionName: aws.String("speak"),
-				Payload:      d,
-			})
-			if err != nil {
-				apiResponse.Body = err.Error()
-			} else {
-				json.Unmarshal(out.Payload, &apiResponse)
-			}
+			fallthrough
 		case "speak":
 			out, err := lambdaClient.Invoke(context.TODO(), &lambdaService.InvokeInput{
 				FunctionName: aws.String("speak"),
@@ -202,11 +189,11 @@ func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 	return apiResponse, nil
 }
 
-func extractMessageData(interaction discordgo.Interaction) (string, error) {
+func extractMessageData(optionName string, interaction discordgo.Interaction) (string, error) {
 	messageData := interaction.Data.(discordgo.ApplicationCommandInteractionData).Resolved.Messages[interaction.Data.(discordgo.ApplicationCommandInteractionData).TargetID].Content
 	appData := interaction.ApplicationCommandData()
 	appData.Options = append(appData.Options, &discordgo.ApplicationCommandInteractionDataOption{
-		Name:  "chat",
+		Name:  optionName,
 		Type:  3,
 		Value: messageData,
 	})

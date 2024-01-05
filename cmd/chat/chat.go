@@ -52,7 +52,7 @@ func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 
 	sqsMessage := statsUtil.SQSObject{
 		Token:         interaction.Token,
-		Command:       "chat",
+		Command:       interaction.ApplicationCommandData().Name,
 		Data:          parsedArguments["Message"],
 		GuildID:       interaction.GuildID,
 		ApplicationID: interaction.AppID,
