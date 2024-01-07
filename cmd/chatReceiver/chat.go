@@ -14,7 +14,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
-	"github.com/ayush6624/go-chatgpt"
 	"github.com/bwmarrin/discordgo"
 	"github.com/stollenaar/copypastabotv2/internal/util"
 	statsUtil "github.com/stollenaar/statisticsbot/util"
@@ -28,11 +27,9 @@ var (
 	//go:embed cavemanRole.txt
 	systemCaveman string
 
-	contextID     string
-	chatGPTClient *chatgpt.Client
-	sqsClient     *sqs.Client
-	sendTimeout   = true
-	sqsObject     statsUtil.SQSObject
+	sqsClient   *sqs.Client
+	sendTimeout = true
+	sqsObject   statsUtil.SQSObject
 )
 
 func init() {
@@ -43,16 +40,6 @@ func init() {
 		log.Fatal("Error loading AWS config:", err)
 	}
 	sqsClient = sqs.NewFromConfig(cfg)
-
-	openAIKey, err := util.ConfigFile.GetOpenAIKey()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	chatGPTClient, err = chatgpt.NewClient(openAIKey)
-	if err != nil {
-		log.Fatal(err)
-	}
 }
 
 func main() {
@@ -86,30 +73,20 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 	var prompt string
 	switch sqsObject.Command {
 	case "caveman":
-		prompt = systemCaveman
+		fallthrough
 	case "caveman-vc":
 		prompt = systemCaveman
+	case "respond":
+		fallthrough
 	case "chat":
 		prompt = systemPrompt
+	case "respond-vc":
+		fallthrough
 	case "speak":
 		prompt = systemPromptSpeak
 	}
 
-	resp, err := chatGPTClient.Send(context.TODO(), &chatgpt.ChatCompletionRequest{
-		Model: chatgpt.GPT35Turbo,
-		User:  message.Interaction.User.ID,
-		Messages: []chatgpt.ChatMessage{
-			{
-				Role:    chatgpt.ChatGPTModelRoleSystem,
-				Content: prompt,
-			},
-			{
-				Role:    chatgpt.ChatGPTModelRoleUser,
-				Content: sqsObject.Data,
-			},
-		},
-	})
-
+	chatRSP, err := util.GetChatGPTResponse(prompt, sqsObject.Data, message.Interaction.User.ID)
 	if err != nil {
 		fmt.Println(err)
 		e := "If you see this, and error likely happened. Whoops"
@@ -127,11 +104,13 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 	}
 
 	switch sqsObject.Command {
+	case "respond":
+		fallthrough
 	case "caveman":
 		fallthrough
 	case "chat":
 		// Getting around the 4096 word limit
-		contents := util.BreakContent(resp.Choices[0].Message.Content, 4096)
+		contents := util.BreakContent(chatRSP.Choices[0].Message.Content, 4096)
 		var embeds []*discordgo.MessageEmbed
 		for _, content := range contents {
 			embed := discordgo.MessageEmbed{}
@@ -167,10 +146,12 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 			return err
 		}
 		return err
+	case "respond-vc":
+		fallthrough
 	case "caveman-vc":
 		fallthrough
 	case "speak":
-		sqsObject.Data = resp.Choices[0].Message.Content
+		sqsObject.Data = chatRSP.Choices[0].Message.Content
 		sqsMessageData, _ := json.Marshal(sqsObject)
 		_, err := sqsClient.SendMessage(context.TODO(), &sqs.SendMessageInput{
 			MessageBody: aws.String(string(sqsMessageData)),

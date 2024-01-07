@@ -205,6 +205,7 @@ locals {
         AWS_PARAMETER_REDDIT_PASSWORD      = "/reddit/password"
         AWS_PARAMETER_REDDIT_CLIENT_ID     = "/reddit/client_id"
         AWS_PARAMETER_REDDIT_CLIENT_SECRET = "/reddit/client_secret"
+        OPENAI_KEY                         = "/openai/api_key"
       }
     }
   }

@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/stollenaar/copypastabotv2/internal/util"
@@ -106,11 +107,25 @@ func synthData(object statsUtil.SQSObject) error {
 
 	contents := util.BreakContent(object.Data, 2950)
 	for _, content := range contents {
+		resp, err := util.WrapIntoSSML(content, "system")
+		textType := types.TextTypeText
+		engine := types.EngineNeural
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			content = resp.Choices[0].Message.Content
+			if !strings.Contains(content, "<speak>") {
+				content = "<speak>" + content + "</speak>"
+			}
+			textType = types.TextTypeSsml
+			engine = types.EngineStandard
+		}
+		fmt.Printf("Content to be synthesized: %s\n", content)
 		synthed, err := pollyClient.SynthesizeSpeech(context.TODO(), &polly.SynthesizeSpeechInput{
 			Text:         aws.String(content),
-			TextType:     types.TextTypeText,
+			TextType:     textType,
 			OutputFormat: types.OutputFormatMp3,
-			Engine:       types.EngineNeural,
+			Engine:       engine,
 			VoiceId:      types.VoiceIdMatthew,
 			LanguageCode: types.LanguageCodeEnUs,
 		})
