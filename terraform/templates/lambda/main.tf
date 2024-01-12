@@ -26,7 +26,7 @@ resource "aws_lambda_function" "lambda_function" {
   description                    = each.value.description
   role                           = aws_iam_role.lambda_execution_role[each.key].arn
   function_name                  = each.key
-  layers                         = try(each.value.layers, null)
+  layers                         = concat(local.default_layers, try(each.value.layers, null))
   handler                        = each.value.handler
   source_code_hash               = try(each.value.override_zip_location, null) != null ? filebase64sha256(each.value.override_zip_location) : data.archive_file.lambda_zip[each.key].output_base64sha256
   runtime                        = each.value.runtime
