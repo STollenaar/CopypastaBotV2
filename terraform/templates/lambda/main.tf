@@ -2,11 +2,12 @@ resource "null_resource" "go_build" {
   for_each = { for key, v in var.functions : key => v if length(regexall("go1.*|provided.al2", v.runtime)) > 0 }
 
   triggers = {
-    "filehash" = data.archive_file.lambda_source_zip[each.key].output_md5
+    "filehash"     = data.archive_file.lambda_source_zip[each.key].output_md5
+    "buildcommand" = each.value.buildArgs
   }
   provisioner "local-exec" {
     working_dir = "${path.root}/../cmd/${each.key}"
-    command     = "go mod tidy && CGO_ENABLED=0 GOOS=linux go build -o bootstrap -tags lambda.norpc"
+    command     = "go mod tidy && CGO_ENABLED=0 GOOS=linux go build -o bootstrap -tags lambda.norpc ${each.value.buildArgs}"
   }
 }
 
