@@ -6,7 +6,7 @@ resource "null_resource" "go_build" {
   }
   provisioner "local-exec" {
     working_dir = "${path.root}/../cmd/${each.key}"
-    command     = "CGO_ENABLED=0 GOOS=linux go build -o bootstrap -tags lambda.norpc"
+    command     = "go mod tidy && CGO_ENABLED=0 GOOS=linux go build -o bootstrap -tags lambda.norpc"
   }
 }
 

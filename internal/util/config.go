@@ -161,6 +161,7 @@ func getAWSParameter(parameterName string) (string, error) {
 	})
 	if err != nil {
 		fmt.Println(fmt.Errorf("error from fetching parameter %s. With error: %w", parameterName, err))
+		return "", err
 	}
 	return *out.Parameter.Value, err
 }
