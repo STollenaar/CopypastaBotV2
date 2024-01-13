@@ -90,7 +90,7 @@
     },
     {
         "name": "speak",
-        "description": "Imitate someone or from a reddit post with some weird results, and listen to the beauty",
+        "description": "Imitate someone with some weird results, get the text from a reddit post or chat with the bot. And listen to the beauty",
         "options": [
             {
                 "name": "url",

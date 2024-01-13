@@ -128,6 +128,24 @@ data "aws_iam_policy_document" "chat_sqs_role_policy_document" {
 }
 
 # IAM policy document for the container to access the sqs queue
+data "aws_iam_policy_document" "help_sqs_role_policy_document" {
+  statement {
+    sid    = "SQSHelpSendMessage"
+    effect = "Allow"
+    actions = [
+      "sqs:DeleteMessage",
+      "sqs:GetQueueAttributes",
+      "sqs:GetQueueUrl",
+      "sqs:ReceiveMessage",
+      "sqs:SendMessage",
+    ]
+    resources = [
+      aws_sqs_queue.help_request.arn
+    ]
+  }
+}
+
+# IAM policy document for the container to access the sqs queue
 data "aws_iam_policy_document" "polly_role_policy_document" {
   statement {
     sid    = "PollySynthSpeech"

@@ -67,18 +67,31 @@ func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 		response.Type = discordgo.InteractionResponsePong
 	} else if interaction.Type == discordgo.InteractionMessageComponent {
 		response.Type = discordgo.InteractionResponseDeferredMessageUpdate
-
-		sqsMessage := statsUtil.SQSObject{
-			Token:         interaction.Token,
-			Command:       "browse",
-			GuildID:       interaction.GuildID,
-			ApplicationID: interaction.AppID,
-			Data:          interaction.MessageComponentData().CustomID,
+		var sqsMessage statsUtil.SQSObject
+		var queue string
+		if interaction.MessageComponentData().CustomID == "command_select" {
+			sqsMessage = statsUtil.SQSObject{
+				Token:         interaction.Token,
+				Command:       interaction.MessageComponentData().Values[0],
+				GuildID:       interaction.GuildID,
+				ApplicationID: interaction.AppID,
+				Data:          interaction.MessageComponentData().CustomID,
+			}
+			queue = util.ConfigFile.AWS_SQS_URL_OTHER[0]
+		}else {
+			sqsMessage = statsUtil.SQSObject{
+				Token:         interaction.Token,
+				Command:       "browse",
+				GuildID:       interaction.GuildID,
+				ApplicationID: interaction.AppID,
+				Data:          interaction.MessageComponentData().CustomID,
+			}
+			queue = util.ConfigFile.AWS_SQS_URL
 		}
 		sqsMessageData, _ := json.Marshal(sqsMessage)
 		_, err := sqsClient.SendMessage(context.TODO(), &sqs.SendMessageInput{
 			MessageBody:  aws.String(string(sqsMessageData)),
-			QueueUrl:     aws.String(util.ConfigFile.AWS_SQS_URL),
+			QueueUrl:     &queue,
 			DelaySeconds: *aws.Int32(2),
 		})
 		if err != nil {

@@ -92,6 +92,39 @@ locals {
         AWS_SQS_URL = aws_sqs_queue.speak_request.url
       }
     }
+
+    help = {
+      description                    = "Help command for CopypastaBot"
+      enable_alarm                   = false
+      runtime                        = "provided.al2"
+      handler                        = "bootstrap"
+      timeout                        = 60 * 5
+      memory_size                    = 128
+      buildArgs                      = ""
+      layers                         = []
+      reserved_concurrent_executions = -1
+      extra_permissions              = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.help_sqs_role_policy_document.json]
+      environment_variables = {
+        AWS_SQS_URL = aws_sqs_queue.help_request.url
+      }
+    }
+
+    helpReceiver = {
+      description                    = "Help command receiver for CopypastaBot"
+      enable_alarm                   = false
+      runtime                        = "provided.al2"
+      handler                        = "bootstrap"
+      timeout                        = 60 * 5
+      memory_size                    = 128
+      buildArgs                      = ""
+      layers                         = []
+      reserved_concurrent_executions = -1
+      extra_permissions              = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.help_sqs_role_policy_document.json]
+      environment_variables = {
+        AWS_SQS_URL = aws_sqs_queue.help_request.url
+      }
+    }
+
     markov = {
       description                    = "Markov command for CopypastaBot"
       enable_alarm                   = false
@@ -163,10 +196,11 @@ locals {
       layers                         = []
       buildArgs                      = "-ldflags=\"-X 'main.commandsFile=${local.commands_file}'\""
       reserved_concurrent_executions = -1
-      extra_permissions              = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.lambda_execution_invocation_document.json, data.aws_iam_policy_document.browse_sqs_role_policy_document.json]
+      extra_permissions              = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.lambda_execution_invocation_document.json, data.aws_iam_policy_document.browse_sqs_role_policy_document.json, data.aws_iam_policy_document.help_sqs_role_policy_document.json]
       environment_variables = {
         AWS_PARAMETER_PUBLIC_DISCORD_TOKEN = "/discord_tokens/${local.name}_public",
         AWS_SQS_URL                        = aws_sqs_queue.browse_request.url
+        AWS_SQS_URL_OTHER                  = "${aws_sqs_queue.help_request.url}"
       }
     }
     speak = {

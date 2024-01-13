@@ -5,6 +5,8 @@ use (
 	./cmd/browseReceiver
 	./cmd/chat
 	./cmd/chatReceiver
+	./cmd/help
+	./cmd/helpReceiver
 	./cmd/markov
 	./cmd/pasta
 	./cmd/ping
