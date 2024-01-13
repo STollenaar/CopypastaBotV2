@@ -18,6 +18,7 @@ func handler() (events.APIGatewayProxyResponse, error) {
 	response := discordgo.InteractionResponse{
 		Data: &discordgo.InteractionResponseData{
 			Content: "Pong",
+			Flags:   discordgo.MessageFlagsEphemeral,
 		},
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 	}

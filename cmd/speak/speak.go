@@ -40,6 +40,7 @@ func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 	response := discordgo.InteractionResponse{
 		Data: &discordgo.InteractionResponseData{
 			Content: "Pong",
+			Flags:   discordgo.MessageFlagsEphemeral,
 		},
 		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
 	}

@@ -41,6 +41,7 @@ func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 	response := discordgo.InteractionResponse{
 		Data: &discordgo.InteractionResponseData{
 			Content: fmt.Sprintln("Loading..."),
+			Flags:   discordgo.MessageFlagsEphemeral,
 		},
 		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
 	}
