@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strconv"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -20,26 +19,9 @@ import (
 	statsUtil "github.com/stollenaar/statisticsbot/util"
 )
 
-type Option struct {
-	Name        string `json:"name"`
-	Type        int    `json:"type"`
-	Description string `json:"description"`
-	Required    bool   `json:"required"`
-}
-
-type Command struct {
-	Name        string   `json:"name"`
-	Type        int      `json:"type,omitempty"`
-	Description string   `json:"description,omitempty"`
-	Options     []Option `json:"options,omitempty"`
-}
-
 var (
 	lambdaClient *lambdaService.Client
 	sqsClient    *sqs.Client
-
-	commandsFile = "[]"
-	commands     []Command
 )
 
 func init() {
@@ -51,16 +33,6 @@ func init() {
 	}
 	lambdaClient = lambdaService.NewFromConfig(cfg)
 	sqsClient = sqs.NewFromConfig(cfg)
-
-	raw, err := strconv.Unquote(commandsFile)
-	if err != nil {
-		log.Fatal("Error unquoting commands:", err)
-	}
-
-	err = json.Unmarshal([]byte(raw), &commands)
-	if err != nil {
-		log.Fatal("Error unmarshalling commands:", err)
-	}
 }
 
 func main() {
@@ -114,7 +86,7 @@ func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 		}
 	} else {
 		cmd := interaction.ApplicationCommandData().Name
-		if !containsCommand(cmd) {
+		if !util.ContainsCommand(cmd) {
 			response = discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
@@ -187,13 +159,4 @@ func extractMessageData(optionName string, interaction discordgo.Interaction) (s
 		return "", err
 	}
 	return string(iData), nil
-}
-
-func containsCommand(command string) bool {
-	for _, c := range commands {
-		if c.Name == command {
-			return true
-		}
-	}
-	return false
 }
