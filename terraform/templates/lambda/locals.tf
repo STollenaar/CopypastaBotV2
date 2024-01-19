@@ -7,6 +7,6 @@ locals {
     }
   }
 
-#   default_layers = ["arn:aws:lambda:ca-central-1:580247275435:layer:LambdaInsightsExtension:37"]
+  #   default_layers = ["arn:aws:lambda:ca-central-1:580247275435:layer:LambdaInsightsExtension:37"]
   default_layers = []
 }
