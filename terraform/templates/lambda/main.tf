@@ -13,7 +13,7 @@ resource "null_resource" "go_build" {
 
 resource "aws_cloudwatch_log_group" "lambda_function_log_group" {
   for_each          = var.functions
-  name              = "/aws/lambda/${each.key}"
+  name              = "/aws/lambda/${var.project}-${each.key}"
   retention_in_days = 7
 }
 
@@ -26,7 +26,7 @@ resource "aws_lambda_function" "lambda_function" {
   filename                       = "${path.root}/../cmd/${each.key}/${each.key}.zip"
   description                    = each.value.description
   role                           = aws_iam_role.lambda_execution_role[each.key].arn
-  function_name                  = each.key
+  function_name                  = "${var.project}-${each.key}"
   layers                         = concat(local.default_layers, try(each.value.layers, null))
   handler                        = each.value.handler
   source_code_hash               = try(each.value.override_zip_location, null) != null ? filebase64sha256(each.value.override_zip_location) : data.archive_file.lambda_zip[each.key].output_base64sha256

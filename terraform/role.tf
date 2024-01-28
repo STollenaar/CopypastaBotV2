@@ -16,7 +16,7 @@ data "aws_iam_policy_document" "assume_role" {
 }
 
 resource "aws_iam_role" "cloudwatch" {
-  name               = "api_gateway_cloudwatch_global"
+  name               = "api_gateway_cloudwatch_${local.name}"
   assume_role_policy = data.aws_iam_policy_document.assume_role.json
 }
 

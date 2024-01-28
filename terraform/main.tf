@@ -208,6 +208,7 @@ locals {
 module "lambda_functions" {
   source    = "./templates/lambda"
   functions = local.functions
+  project   = local.name
 }
 
 resource "aws_scheduler_schedule" "example" {

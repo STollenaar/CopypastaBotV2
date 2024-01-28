@@ -1,7 +1,7 @@
 resource "aws_iam_role" "lambda_execution_role" {
   for_each = var.functions
 
-  name = "${each.key}LambdaRole"
+  name = "${var.project}${each.key}LambdaRole"
 
   assume_role_policy = data.aws_iam_policy_document.lambda_execution_role_document.json
 }

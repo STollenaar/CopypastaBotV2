@@ -1,26 +1,26 @@
 resource "aws_sqs_queue" "browse_request" {
-  name                       = "browse-request"
+  name                       = "${local.name}-browse-request"
   message_retention_seconds  = 60 * 10
   receive_wait_time_seconds  = 10
   visibility_timeout_seconds = 60 * 5
 }
 
 resource "aws_sqs_queue" "speak_request" {
-  name                       = "speak-request"
+  name                       = "${local.name}-speak-request"
   message_retention_seconds  = 60 * 10
   receive_wait_time_seconds  = 10
   visibility_timeout_seconds = 60 * 10
 }
 
 resource "aws_sqs_queue" "chat_request" {
-  name                       = "chat-request"
+  name                       = "${local.name}-chat-request"
   message_retention_seconds  = 60 * 10
   receive_wait_time_seconds  = 10
   visibility_timeout_seconds = 60 * 10
 }
 
 resource "aws_sqs_queue" "help_request" {
-  name                       = "help-request"
+  name                       = "${local.name}-help-request"
   message_retention_seconds  = 60 * 10
   receive_wait_time_seconds  = 10
   visibility_timeout_seconds = 60 * 10

@@ -16,3 +16,5 @@ variable "functions" {
   }))
   description = "The functions, mapped by the folder name under lambda and the description"
 }
+
+variable "project" {}

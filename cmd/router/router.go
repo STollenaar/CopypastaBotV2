@@ -78,7 +78,7 @@ func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 				Data:          interaction.MessageComponentData().CustomID,
 			}
 			queue = util.ConfigFile.AWS_SQS_URL_OTHER[0]
-		}else {
+		} else {
 			sqsMessage = statsUtil.SQSObject{
 				Token:         interaction.Token,
 				Command:       "browse",
@@ -139,7 +139,7 @@ func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 
 			// Routing the commands to the correctly lambda that will handle it
 			out, err := lambdaClient.Invoke(context.TODO(), &lambdaService.InvokeInput{
-				FunctionName: &cmd,
+				FunctionName: aws.String(fmt.Sprintf("copypastabot-%s", cmd)),
 				Payload:      d,
 			})
 			if err != nil {
