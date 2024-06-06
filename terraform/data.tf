@@ -1,7 +1,7 @@
 data "terraform_remote_state" "discord_bots_cluster" {
   backend = "s3"
   config = {
-    profile = local.used_profile.name
+    # profile = local.used_profile.name
     region  = "ca-central-1"
     bucket  = "stollenaar-terraform-states"
     key     = "infrastructure/terraform.tfstate"
@@ -11,7 +11,7 @@ data "terraform_remote_state" "discord_bots_cluster" {
 data "terraform_remote_state" "statisticsbot" {
   backend = "s3"
   config = {
-    profile = local.used_profile.name
+    # profile = local.used_profile.name
     region  = "ca-central-1"
     bucket  = "stollenaar-terraform-states"
     key     = "discordbots/statisticsBot.tfstate"

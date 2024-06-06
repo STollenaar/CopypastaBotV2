@@ -1,7 +1,7 @@
 terraform {
   backend "s3" {
     region  = "ca-central-1"
-    profile = "personal"
+    # profile = "personal"
     bucket  = "stollenaar-terraform-states"
     key     = "discordbots/copypastabot.tfstate"
   }
@@ -18,12 +18,11 @@ terraform {
   required_version = ">= 1.0.0"
 }
 provider "aws" {
-  profile = local.used_profile.name
 }
 
 locals {
   name         = "copypastabot"
-  used_profile = data.awsprofiler_list.list_profiles.profiles[try(index(data.awsprofiler_list.list_profiles.profiles.*.name, "personal"), 0)]
+#   used_profile = data.awsprofiler_list.list_profiles.profiles[try(index(data.awsprofiler_list.list_profiles.profiles.*.name, "personal"), 0)]
 
   commands_file = "$(jq -c '' ../../tools/register/commands.json | jq -R)"
 
