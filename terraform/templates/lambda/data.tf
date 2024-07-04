@@ -30,6 +30,14 @@ data "aws_iam_policy_document" "lambda_execution_role_document" {
 
 data "aws_caller_identity" "current" {}
 
+data "aws_ecr_image" "service_image" {
+  for_each   = { for key, v in var.functions : key => v if length(regexall("go1.*|provided.al2", v.runtime)) > 0 && try(v.image_uri, null) != null }
+  depends_on = [null_resource.go_build, null_resource.docker_build]
+
+  repository_name = "lambdas"
+  image_tag       = lower(each.key)
+}
+
 # IAM policy document for the Lambda to access S3
 data "aws_iam_policy_document" "lambda_execution_role_policy_document" {
   for_each = var.functions

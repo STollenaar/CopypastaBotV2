@@ -9,7 +9,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.29.7
 	github.com/bwmarrin/discordgo v0.27.1
 	github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20240107164811-ac7c897c0018
-	github.com/stollenaar/statisticsbot/util v0.0.0-20240112205218-fe984970b5b4
 )
 
 require (
@@ -46,6 +45,7 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/spf13/viper v1.18.2 // indirect
 	github.com/stollenaar/aws-rotating-credentials-provider/credentials v0.0.0-20240112205114-26346908241a // indirect
+	github.com/stollenaar/statisticsbot/util v0.0.0-20240112205218-fe984970b5b4 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/vartanbeno/go-reddit/v2 v2.0.1 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a // indirect

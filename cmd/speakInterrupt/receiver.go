@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -10,17 +9,12 @@ import (
 	"strings"
 
 	"github.com/stollenaar/copypastabotv2/internal/util"
-	statsUtil "github.com/stollenaar/statisticsbot/util"
 
 	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/bwmarrin/discordgo"
 )
 
 var (
-	sqsClient *sqs.Client
 	Bot       *discordgo.Session
 )
 
@@ -30,21 +24,16 @@ type channelVS struct {
 }
 
 func init() {
-	cfg, err := config.LoadDefaultConfig(context.TODO())
-	if err != nil {
-		log.Fatalf("configuration error: %v", err)
-	}
-	sqsClient = sqs.NewFromConfig(cfg)
 
 	token, err := util.ConfigFile.GetDiscordToken()
 	if err != nil {
-		log.Fatalf("error fetching discord token: %v", err)
+		log.Fatalf("error initializing speakinterrupt: error fetching discord token: %v", err)
 	}
 
 	Bot, err = discordgo.New("Bot " + token)
 	if err != nil {
 		Bot.Close()
-		log.Fatalf("error creating new discord session: %v", err)
+		log.Fatalf("error initializing speakinterrupt: error creating new discord session: %v", err)
 	}
 
 	err = Bot.Open()
@@ -77,7 +66,7 @@ func handler() error {
 		user = strings.ReplaceAll(user, "<", "")
 		user = strings.ReplaceAll(user, ">", "")
 		user = strings.ReplaceAll(user, "@", "")
-		sqsMessage := statsUtil.SQSObject{
+		sqsMessage := util.SQSObject{
 			Token:         user,
 			Command:       "speak",
 			Type:          "user",
@@ -87,10 +76,7 @@ func handler() error {
 		}
 		sqsMessageData, _ := json.Marshal(sqsMessage)
 		fmt.Printf("Sending sqsData: %s\n", string(sqsMessageData))
-		_, err := sqsClient.SendMessage(context.TODO(), &sqs.SendMessageInput{
-			MessageBody: aws.String(string(sqsMessageData)),
-			QueueUrl:    &util.ConfigFile.AWS_SQS_URL,
-		})
+		err := util.ConfigFile.SendStatsBotRequest(sqsMessage)
 		if err != nil {
 			return fmt.Errorf("error sending interrupt event to sqs: %v", err)
 		}

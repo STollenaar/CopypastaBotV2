@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
 	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -14,7 +13,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/stollenaar/copypastabotv2/internal/util"
-	statsUtil "github.com/stollenaar/statisticsbot/util"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -24,6 +22,7 @@ var (
 )
 
 func init() {
+	fmt.Println("Starting init")
 	// Create a config with the credentials provider.
 	cfg, err := config.LoadDefaultConfig(context.TODO())
 
@@ -31,25 +30,28 @@ func init() {
 		log.Fatal("Error loading AWS config:", err)
 	}
 	sqsClient = sqs.NewFromConfig(cfg)
-
+	fmt.Println("Done init")
 }
 
 func main() {
 	lambda.Start(handler)
 }
 
-func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	response := discordgo.InteractionResponse{
-		Data: &discordgo.InteractionResponseData{
-			Content: fmt.Sprintln("Loading..."),
-		},
-		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+func handler(snsEvent events.SNSEvent) error {
+	var req events.APIGatewayProxyRequest
+	var interaction discordgo.Interaction
+	var response discordgo.WebhookEdit
+
+	err := json.Unmarshal([]byte(snsEvent.Records[0].SNS.Message), &req)
+	if err !=nil {
+		return err
+	}
+	err = json.Unmarshal([]byte(req.Body), &interaction)
+	if err !=nil {
+		return err
 	}
 
-	var interaction discordgo.Interaction
-	json.Unmarshal([]byte(req.Body), &interaction)
-
-	sqsMessage := statsUtil.SQSObject{
+	sqsMessage := util.SQSObject{
 		Token:         interaction.Token,
 		Command:       "markov",
 		GuildID:       interaction.GuildID,
@@ -61,30 +63,32 @@ func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 	if url, ok := parsedArguments["Url"]; ok {
 		sqsMessage.Type = "url"
 		sqsMessage.Data = url
+
+		sqsMessageData, _ := json.Marshal(sqsMessage)
+		_, err := sqsClient.SendMessage(context.TODO(), &sqs.SendMessageInput{
+			MessageBody: aws.String(string(sqsMessageData)),
+			QueueUrl:    aws.String(util.ConfigFile.AWS_SQS_URL),
+		})
+		if err != nil {
+			fmt.Println(err)
+		}
 	} else if user, ok := parsedArguments["User"]; ok {
 		user = strings.ReplaceAll(user, "<", "")
 		user = strings.ReplaceAll(user, ">", "")
 		user = strings.ReplaceAll(user, "@", "")
 		sqsMessage.Type = "user"
 		sqsMessage.Data = user
-	}
 
-	sqsMessageData, _ := json.Marshal(sqsMessage)
-	_, err := sqsClient.SendMessage(context.TODO(), &sqs.SendMessageInput{
-		MessageBody: aws.String(string(sqsMessageData)),
-		QueueUrl:    aws.String(util.ConfigFile.AWS_SQS_URL),
-	})
-	if err != nil {
-		fmt.Println(err)
+		err := util.ConfigFile.SendStatsBotRequest(sqsMessage)
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
 	}
 
 	data, _ := json.Marshal(response)
 	fmt.Printf("Responding with %s\n", string(data))
-	return events.APIGatewayProxyResponse{
-		StatusCode: http.StatusOK,
-		Headers: map[string]string{
-			"Content-Type": "application/json",
-		},
-		Body: string(data),
-	}, nil
+	_, err = util.SendRequest("PATCH", interaction.AppID, interaction.Token, util.WEBHOOK, data)
+
+	return err
 }

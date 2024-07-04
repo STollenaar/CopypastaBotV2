@@ -1,11 +1,18 @@
 package util
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"net"
+	"net/http"
 	"os"
+	"runtime/debug"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -13,8 +20,16 @@ import (
 	"github.com/joho/godotenv"
 )
 
+type Webhook struct {
+	id    string
+	token string
+}
+
 type Config struct {
-	DISCORD_TOKEN        string
+	DISCORD_TOKEN         string
+	DISCORD_WEBHOOK_ID    string
+	DISCORD_WEBHOOK_TOKEN string
+
 	REDDIT_USERNAME      string
 	REDDIT_PASSWORD      string
 	REDDIT_CLIENT_ID     string
@@ -22,12 +37,16 @@ type Config struct {
 
 	AWS_REGION string
 
-	AWS_PARAMETER_DISCORD_TOKEN        string
+	AWS_PARAMETER_DISCORD_TOKEN string
+	AWS_DISCORD_WEBHOOK_ID      string
+	AWS_DISCORD_WEBHOOK_TOKEN   string
+
 	AWS_PARAMETER_PUBLIC_DISCORD_TOKEN string
 	AWS_PARAMETER_REDDIT_USERNAME      string
 	AWS_PARAMETER_REDDIT_PASSWORD      string
 	AWS_PARAMETER_REDDIT_CLIENT_ID     string
 	AWS_PARAMETER_REDDIT_CLIENT_SECRET string
+	AWS_SNS_TOPIC_ARN                  string
 	AWS_SQS_URL                        string
 	AWS_SQS_URL_OTHER                  []string
 
@@ -39,6 +58,25 @@ type Config struct {
 var (
 	ssmClient  *ssm.Client
 	ConfigFile *Config
+
+	dnsResolverIP        = "100.100.100.100:53" // Tailscale DNS resolver.
+	dnsResolverProto     = "tcp"                // Protocol to use for the DNS resolver
+	dnsResolverTimeoutMs = 5000
+
+	dialer = &net.Dialer{
+		Resolver: &net.Resolver{
+			PreferGo: true,
+			Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+				d := net.Dialer{
+					Timeout: time.Duration(dnsResolverTimeoutMs) * time.Millisecond,
+				}
+				return d.DialContext(ctx, dnsResolverProto, dnsResolverIP)
+			},
+		},
+	}
+	dialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+		return dialer.DialContext(ctx, network, addr)
+	}
 )
 
 // initializing the main config file
@@ -56,10 +94,15 @@ func init() {
 
 	ConfigFile = &Config{
 		DISCORD_TOKEN:                      os.Getenv("DISCORD_TOKEN"),
+		DISCORD_WEBHOOK_ID:                 os.Getenv("DISCORD_WEBHOOK_ID"),
+		DISCORD_WEBHOOK_TOKEN:              os.Getenv("DISCORD_WEBHOOK_TOKEN"),
 		AWS_REGION:                         os.Getenv("AWS_REGION"),
+		AWS_SNS_TOPIC_ARN:                  os.Getenv("AWS_SNS_TOPIC_ARN"),
 		AWS_SQS_URL:                        os.Getenv("AWS_SQS_URL"),
 		AWS_SQS_URL_OTHER:                  strings.Split(os.Getenv("AWS_SQS_URL_OTHER"), ";"),
 		AWS_PARAMETER_DISCORD_TOKEN:        os.Getenv("AWS_PARAMETER_DISCORD_TOKEN"),
+		AWS_DISCORD_WEBHOOK_ID:             os.Getenv("AWS_DISCORD_WEBHOOK_ID"),
+		AWS_DISCORD_WEBHOOK_TOKEN:          os.Getenv("AWS_DISCORD_WEBHOOK_TOKEN"),
 		AWS_PARAMETER_PUBLIC_DISCORD_TOKEN: os.Getenv("AWS_PARAMETER_PUBLIC_DISCORD_TOKEN"),
 		AWS_PARAMETER_REDDIT_USERNAME:      os.Getenv("AWS_PARAMETER_REDDIT_USERNAME"),
 		AWS_PARAMETER_REDDIT_PASSWORD:      os.Getenv("AWS_PARAMETER_REDDIT_PASSWORD"),
@@ -77,6 +120,7 @@ func init() {
 	if ConfigFile.TERMINAL_REGEX == "" {
 		ConfigFile.TERMINAL_REGEX = `(\.|,|:|;|\?|!)$`
 	}
+
 }
 
 func init() {
@@ -93,7 +137,7 @@ func init() {
 
 func (c *Config) GetDiscordToken() (string, error) {
 	if c.DISCORD_TOKEN == "" && c.AWS_PARAMETER_DISCORD_TOKEN == "" {
-		log.Fatal("DISCORD_TOKEN or AWS_PARAMETER_DISCORD_TOKEN is not set.")
+		return "", fmt.Errorf("DISCORD_TOKEN or AWS_PARAMETER_DISCORD_TOKEN is not set: %s", string(debug.Stack()))
 	}
 
 	if c.DISCORD_TOKEN != "" {
@@ -102,9 +146,39 @@ func (c *Config) GetDiscordToken() (string, error) {
 	return getAWSParameter(c.AWS_PARAMETER_DISCORD_TOKEN)
 }
 
+func (c *Config) GetDiscordWebhook() (Webhook, error) {
+	if c.DISCORD_WEBHOOK_ID == "" && c.AWS_DISCORD_WEBHOOK_ID == "" {
+		return Webhook{}, fmt.Errorf("DISCORD_WEBHOOK_ID or AWS_DISCORD_WEBHOOK_ID is not set: %s", string(debug.Stack()))
+	}
+	if c.DISCORD_WEBHOOK_TOKEN == "" && c.AWS_DISCORD_WEBHOOK_TOKEN == "" {
+		return Webhook{}, fmt.Errorf("DISCORD_WEBHOOK_TOKEN or AWS_DISCORD_WEBHOOK_TOKEN is not set: %s", string(debug.Stack()))
+	}
+
+	webhook := Webhook{}
+	if c.DISCORD_WEBHOOK_ID != "" {
+		webhook.id = c.DISCORD_WEBHOOK_ID
+	} else {
+		par, err := getAWSParameter(c.AWS_DISCORD_WEBHOOK_ID)
+		if err != nil {
+			return Webhook{}, err
+		}
+		webhook.id = par
+	}
+	if c.DISCORD_WEBHOOK_TOKEN != "" {
+		webhook.token = c.DISCORD_WEBHOOK_TOKEN
+	} else {
+		par, err := getAWSParameter(c.AWS_DISCORD_WEBHOOK_TOKEN)
+		if err != nil {
+			return Webhook{}, err
+		}
+		webhook.token = par
+	}
+	return webhook, nil
+}
+
 func (c *Config) GetPublicDiscordToken() (string, error) {
 	if c.AWS_PARAMETER_PUBLIC_DISCORD_TOKEN == "" {
-		log.Fatal("AWS_PARAMETER_PUBLIC_DISCORD_TOKEN is not set.")
+		return "", fmt.Errorf("AWS_PARAMETER_PUBLIC_DISCORD_TOKEN is not set: %s", string(debug.Stack()))
 	}
 
 	return getAWSParameter(c.AWS_PARAMETER_PUBLIC_DISCORD_TOKEN)
@@ -112,7 +186,7 @@ func (c *Config) GetPublicDiscordToken() (string, error) {
 
 func (c *Config) GetRedditUsername() (string, error) {
 	if c.AWS_PARAMETER_REDDIT_USERNAME == "" && c.REDDIT_USERNAME == "" {
-		log.Fatal("REDDIT_USERNAME or AWS_PARAMETER_REDDIT_USERNAME is not set.")
+		return "", fmt.Errorf("REDDIT_USERNAME or AWS_PARAMETER_REDDIT_USERNAME is not set: %s", string(debug.Stack()))
 	}
 
 	if c.REDDIT_USERNAME != "" {
@@ -123,7 +197,7 @@ func (c *Config) GetRedditUsername() (string, error) {
 
 func (c *Config) GetRedditPassword() (string, error) {
 	if c.AWS_PARAMETER_REDDIT_PASSWORD == "" && c.REDDIT_PASSWORD == "" {
-		log.Fatal("AWS_PARAMETER_REDDIT_PASSWORD or REDDIT_PASSWORD is not set.")
+		return "", fmt.Errorf("AWS_PARAMETER_REDDIT_PASSWORD or REDDIT_PASSWORD is not set: %s", string(debug.Stack()))
 	}
 
 	if c.REDDIT_PASSWORD != "" {
@@ -134,7 +208,7 @@ func (c *Config) GetRedditPassword() (string, error) {
 
 func (c *Config) GetRedditClientID() (string, error) {
 	if c.AWS_PARAMETER_REDDIT_CLIENT_ID == "" && c.REDDIT_CLIENT_ID == "" {
-		log.Fatal("REDDIT_CLIENT_ID or AWS_PARAMETER_REDDIT_CLIENT_ID is not set.")
+		return "", fmt.Errorf("REDDIT_CLIENT_ID or AWS_PARAMETER_REDDIT_CLIENT_ID is not set: %s", string(debug.Stack()))
 	}
 
 	if c.REDDIT_CLIENT_ID != "" {
@@ -145,7 +219,7 @@ func (c *Config) GetRedditClientID() (string, error) {
 
 func (c *Config) GetRedditClientSecret() (string, error) {
 	if c.AWS_PARAMETER_REDDIT_CLIENT_SECRET == "" && c.REDDIT_CLIENT_SECRET == "" {
-		log.Fatal("REDDIT_CLIENT_SECRET or REDDIT_CLIENT_SECRET is not set.")
+		return "", fmt.Errorf("REDDIT_CLIENT_SECRET or REDDIT_CLIENT_SECRET is not set: %s", string(debug.Stack()))
 	}
 
 	if c.REDDIT_CLIENT_SECRET != "" {
@@ -168,7 +242,37 @@ func getAWSParameter(parameterName string) (string, error) {
 
 func (c *Config) GetOpenAIKey() (string, error) {
 	if c.OPENAI_KEY == "" {
-		log.Fatal("OPENAI_KEY is not defined")
+		return "", fmt.Errorf("OPENAI_KEY is not defined")
 	}
 	return getAWSParameter(c.OPENAI_KEY)
+}
+
+func (c *Config) SendStatsBotRequest(sqsObject SQSObject) error {
+	jsonData, err := json.Marshal(sqsObject)
+	if err != nil {
+		return err
+	}
+	bodyReader := bytes.NewReader(jsonData)
+
+	http.DefaultTransport.(*http.Transport).DialContext = dialContext
+	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("https://%s/userMessages", c.STATISTICS_BOT), bodyReader)
+
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := http.Client{
+		Timeout: 30 * time.Second,
+	}
+
+	fmt.Printf("Doing Request: %v", *req)
+
+	res, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	body, _ := io.ReadAll(res.Body)
+	fmt.Printf("Response body: %s\n", string(body))
+	return err
 }

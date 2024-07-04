@@ -3,12 +3,12 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"net/url"
 	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/stollenaar/copypastabotv2/internal/util"
 
 	"github.com/bwmarrin/discordgo"
@@ -18,21 +18,24 @@ func main() {
 	lambda.Start(handler)
 }
 
-func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	d, _ := json.Marshal(req)
-	fmt.Println(string(d))
+func handler(snsEvent events.SNSEvent) error {
+	var req events.APIGatewayProxyRequest
 	var interaction discordgo.Interaction
+	var response discordgo.WebhookEdit
 
-	json.Unmarshal([]byte(req.Body), &interaction)
+	err := json.Unmarshal([]byte(snsEvent.Records[0].SNS.Message), &req)
+	if err !=nil {
+		return err
+	}
+	err = json.Unmarshal([]byte(req.Body), &interaction)
+	if err !=nil {
+		return err
+	}
+	
 	fmt.Println(interaction.ApplicationCommandData().Options)
 	parsedArguments := util.ParseArguments([]string{"url", "postid"}, interaction.ApplicationCommandData().Options)
 	fmt.Println(parsedArguments)
-	response := discordgo.InteractionResponse{
-		Data: &discordgo.InteractionResponseData{
-			Content: fmt.Sprintln("something went wrong"),
-		},
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-	}
+
 
 	if parsedArguments["Url"] != "" {
 		if uri, err := url.ParseRequestURI(parsedArguments["Url"]); err == nil {
@@ -46,19 +49,19 @@ func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 	}
 	if parsedArguments["Postid"] != "" {
 		embeds := util.DisplayRedditPost(parsedArguments["Postid"], false)
-		response.Data.Embeds = embeds
-		response.Data.Content = ""
+		response.Embeds = &embeds
+		response.Content = aws.String("")
 	}
 
-	data, _ := json.Marshal(response)
+	data, err := json.Marshal(response)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
 
-	return events.APIGatewayProxyResponse{
-		StatusCode: http.StatusOK,
-		Headers: map[string]string{
-			"Content-Type": "application/json",
-		},
-		Body: string(data),
-	}, nil
+	_, err = util.SendRequest("PATCH", interaction.AppID, interaction.Token, util.WEBHOOK, data)
+
+	return err
 }
 
 func findIndex(array []string, param string) int {

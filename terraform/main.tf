@@ -1,9 +1,9 @@
 terraform {
   backend "s3" {
-    region  = "ca-central-1"
+    region = "ca-central-1"
     # profile = "personal"
-    bucket  = "stollenaar-terraform-states"
-    key     = "discordbots/copypastabot.tfstate"
+    bucket = "stollenaar-terraform-states"
+    key    = "discordbots/copypastabot.tfstate"
   }
   required_providers {
     aws = {
@@ -21,8 +21,8 @@ provider "aws" {
 }
 
 locals {
-  name         = "copypastabot"
-#   used_profile = data.awsprofiler_list.list_profiles.profiles[try(index(data.awsprofiler_list.list_profiles.profiles.*.name, "personal"), 0)]
+  name = "copypastabot"
+  #   used_profile = data.awsprofiler_list.list_profiles.profiles[try(index(data.awsprofiler_list.list_profiles.profiles.*.name, "personal"), 0)]
 
   commands_file = "$(jq -c '' ../../tools/register/commands.json | jq -R)"
 
@@ -31,7 +31,7 @@ locals {
       description       = "Browse command for CopypastaBot"
       runtime           = "provided.al2"
       handler           = "bootstrap"
-      timeout           = 3
+      timeout           = 60 * 5
       memory_size       = 128
       extra_permissions = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.browse_sqs_role_policy_document.json]
       environment_variables = {
@@ -56,7 +56,7 @@ locals {
       description       = "Chat command for CopypastaBot"
       runtime           = "provided.al2"
       handler           = "bootstrap"
-      timeout           = 3
+      timeout           = 60 * 5
       memory_size       = 128
       extra_permissions = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.chat_sqs_role_policy_document.json]
       environment_variables = {
@@ -73,6 +73,21 @@ locals {
       environment_variables = {
         OPENAI_KEY  = "/openai/api_key"
         AWS_SQS_URL = aws_sqs_queue.speak_request.url
+      }
+    }
+    dunceReceiver = {
+      description       = "Dunce receiver for CopypastaBot"
+      runtime           = "provided.al2"
+      handler           = "bootstrap"
+      timeout           = 60 * 5
+      memory_size       = 128
+      extra_permissions = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.sqs_role_policy_document.json]
+      environment_variables = {
+        AWS_DISCORD_WEBHOOK_ID    = "/discord/webhook/id"
+        AWS_DISCORD_WEBHOOK_TOKEN = "/discord/webhook/token"
+        # DISCORD_WEBHOOK_ID    = "1256008646828228618"
+        # DISCORD_WEBHOOK_TOKEN = "x7H8AydI8-0dglXoec1jc-qCqvGj1n3wMTgo9kBWG4eZ4jI4nKFe6veodaLMbBvQFoUh"
+        OPENAI_KEY            = "/openai/api_key"
       }
     }
 
@@ -101,21 +116,25 @@ locals {
     }
 
     markov = {
-      description       = "Markov command for CopypastaBot"
-      runtime           = "provided.al2"
-      handler           = "bootstrap"
-      timeout           = 3
-      memory_size       = 128
+      description = "Markov command for CopypastaBot"
+      runtime     = "provided.al2"
+      handler     = "bootstrap"
+      timeout     = 60 * 5
+      memory_size = 128
+      image_uri   = "405934267152.dkr.ecr.ca-central-1.amazonaws.com/lambdas:markov"
+      #   layers            = [data.aws_lambda_layer_version.tailscale_layer.arn]
       extra_permissions = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.sqs_role_policy_document.json]
       environment_variables = {
-        AWS_SQS_URL = data.terraform_remote_state.statisticsbot.outputs.sqs.request.url
+        TS_KEY       = data.aws_ssm_parameter.tailscale_key.value
+        AWS_SQS_URL  = data.terraform_remote_state.statisticsbot.outputs.sqs.request.url
+        STATSBOT_URL = "statisticsbot-statisticsbot-ingress.tail88c07.ts.net"
       }
     }
     pasta = {
       description       = "Pasta command for CopypastaBot"
       runtime           = "provided.al2"
       handler           = "bootstrap"
-      timeout           = 3
+      timeout           = 60 * 5
       memory_size       = 128
       extra_permissions = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json]
       environment_variables = {
@@ -129,7 +148,7 @@ locals {
       description       = "Ping command for CopypastaBot"
       runtime           = "provided.al2"
       handler           = "bootstrap"
-      timeout           = 3
+      timeout           = 60 * 5
       memory_size       = 128
       extra_permissions = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json]
     }
@@ -154,33 +173,42 @@ locals {
       extra_permissions = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.lambda_execution_invocation_document.json, data.aws_iam_policy_document.browse_sqs_role_policy_document.json, data.aws_iam_policy_document.help_sqs_role_policy_document.json]
       environment_variables = {
         AWS_PARAMETER_PUBLIC_DISCORD_TOKEN = "/discord_tokens/${local.name}_public",
+        AWS_SNS_TOPIC_ARN                  = aws_sns_topic.router_sns.arn
         AWS_SQS_URL                        = aws_sqs_queue.browse_request.url
         AWS_SQS_URL_OTHER                  = "${aws_sqs_queue.help_request.url}"
       }
     }
     speak = {
-      description       = "Speak command for CopypastaBot"
-      runtime           = "provided.al2"
-      handler           = "bootstrap"
-      timeout           = 3
-      memory_size       = 128
+      description = "Speak command for CopypastaBot"
+      runtime     = "provided.al2"
+      handler     = "bootstrap"
+      timeout     = 60 * 5
+      memory_size = 128
+      #   layers            = [data.aws_lambda_layer_version.tailscale_layer.arn]
+      image_uri         = "405934267152.dkr.ecr.ca-central-1.amazonaws.com/lambdas:speak"
       extra_permissions = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.sqs_role_policy_document.json, data.aws_iam_policy_document.speak_sqs_role_policy_document.json, data.aws_iam_policy_document.chat_sqs_role_policy_document.json]
       environment_variables = {
+        TS_KEY            = data.aws_ssm_parameter.tailscale_key.value
         AWS_SQS_URL       = data.terraform_remote_state.statisticsbot.outputs.sqs.request.url
         AWS_SQS_URL_OTHER = "${aws_sqs_queue.speak_request.url};${aws_sqs_queue.chat_request.url}"
+        STATSBOT_URL      = "statisticsbot-statisticsbot-ingress.tail88c07.ts.net"
       }
     }
     speakInterrupt = {
-      description       = "Speak Interrupt for CopypastaBot"
-      runtime           = "provided.al2"
-      handler           = "bootstrap"
-      timeout           = 60 * 10
-      memory_size       = 512
+      description = "Speak Interrupt for CopypastaBot"
+      runtime     = "provided.al2"
+      handler     = "bootstrap"
+      timeout     = 60 * 10
+      memory_size = 512
+      #   layers            = [data.aws_lambda_layer_version.tailscale_layer.arn]
+      image_uri         = "405934267152.dkr.ecr.ca-central-1.amazonaws.com/lambdas:speakinterrupt"
       extra_permissions = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.sqs_role_policy_document.json]
       environment_variables = {
+        TS_KEY                      = data.aws_ssm_parameter.tailscale_key.value
         DEBUG_GUILD                 = "544911814886948865"
         AWS_PARAMETER_DISCORD_TOKEN = "/discord_tokens/${local.name}"
         AWS_SQS_URL                 = data.terraform_remote_state.statisticsbot.outputs.sqs.request.url
+        STATSBOT_URL                = "statisticsbot-statisticsbot-ingress.tail88c07.ts.net"
       }
     }
     speakReceiver = {

@@ -8,8 +8,17 @@ import (
 	"strconv"
 
 	"github.com/bwmarrin/discordgo"
-	statsUtil "github.com/stollenaar/statisticsbot/util"
 )
+
+type SQSObject struct {
+	Type          string `json:"type"`
+	Command       string `json:"command"`
+	Data          string `json:"data"`
+	ChannelID     string `json:"channelID"`
+	GuildID       string `json:"guildID"`
+	Token         string `json:"token"`
+	ApplicationID string `json:"applicationID"`
+}
 
 // MessageObject general messageobject for functions
 type MessageObject struct {
@@ -21,7 +30,7 @@ type MessageObject struct {
 	Date      discordgo.TimeStamps `bson:"Date" json:"Date"`
 }
 
-func GetMessageObject(object statsUtil.SQSObject) (discordgo.Message, error) {
+func GetMessageObject(object SQSObject) (discordgo.Message, error) {
 	if _, err := strconv.Atoi(object.Token); err == nil {
 		return discordgo.Message{}, errors.New("object token is a snowflake")
 	}

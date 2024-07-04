@@ -10,13 +10,12 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/bwmarrin/discordgo"
 	"github.com/stollenaar/copypastabotv2/internal/util"
-	statsUtil "github.com/stollenaar/statisticsbot/util"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
 
 var (
-	sqsObject statsUtil.SQSObject
+	sqsObject util.SQSObject
 )
 
 func main() {

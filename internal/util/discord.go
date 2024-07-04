@@ -9,7 +9,6 @@ import (
 	"net/http"
 
 	"github.com/bwmarrin/discordgo"
-	statsUtil "github.com/stollenaar/statisticsbot/util"
 )
 
 type KIND string
@@ -24,7 +23,7 @@ const (
 	PATCH_URL        = "https://discord.com/api/v10/webhooks/%s/%s/messages/%s"
 )
 
-func SendError(sqsObject statsUtil.SQSObject) {
+func SendError(sqsObject SQSObject) {
 	e := "If you see this, and error likely happened. Whoops"
 	response := discordgo.WebhookEdit{
 		Content: &e,
@@ -39,6 +38,9 @@ func SendError(sqsObject statsUtil.SQSObject) {
 
 func SendRequest(method, interactionID, interactionToken string, kind KIND, data []byte, messageID ...string) (*http.Response, error) {
 	url := API_URL
+	var err error
+	var req *http.Request
+
 	if kind == INTERACTION {
 		url += "callback"
 	} else {
@@ -49,12 +51,17 @@ func SendRequest(method, interactionID, interactionToken string, kind KIND, data
 			url += messageID[0]
 		}
 	}
-	req, err := http.NewRequest(method, fmt.Sprintf(url, kind, interactionID, interactionToken), bytes.NewBuffer(data))
+
+	req, err = http.NewRequest(method, fmt.Sprintf(url, kind, interactionID, interactionToken), bytes.NewBuffer(data))
+
 	if err != nil {
 		fmt.Println(err)
 		return nil, err
 	}
 	req.Header.Add("Content-Type", "application/json")
+	if token, err := ConfigFile.GetDiscordToken(); err == nil {
+		req.Header.Add("Authorization", "Bot "+token)
+	}
 	client := &http.Client{}
 	fmt.Println(*req)
 	resp, err := client.Do(req)
@@ -83,4 +90,28 @@ func IsVerified(body, signature, timestamp string) bool {
 		return false
 	}
 	return ed25519.Verify(decodedKey, []byte(timestamp+body), decodedSig)
+}
+
+func SendAsWebhook(data []byte) (*http.Response, error) {
+
+	webhook, err := ConfigFile.GetDiscordWebhook()
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequest("POST", fmt.Sprintf(WEBHOOK_POST_URL, webhook.id, webhook.token), bytes.NewBuffer(data))
+
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
+	req.Header.Add("Content-Type", "application/json")
+
+	client := &http.Client{}
+	fmt.Println(*req)
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
+	return resp, nil
 }

@@ -16,7 +16,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/bwmarrin/discordgo"
 	"github.com/stollenaar/copypastabotv2/internal/util"
-	statsUtil "github.com/stollenaar/statisticsbot/util"
 )
 
 var (
@@ -29,7 +28,7 @@ var (
 
 	sqsClient   *sqs.Client
 	sendTimeout = true
-	sqsObject   statsUtil.SQSObject
+	sqsObject   util.SQSObject
 )
 
 func init() {

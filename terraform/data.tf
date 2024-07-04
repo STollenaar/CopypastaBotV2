@@ -2,9 +2,9 @@ data "terraform_remote_state" "discord_bots_cluster" {
   backend = "s3"
   config = {
     # profile = local.used_profile.name
-    region  = "ca-central-1"
-    bucket  = "stollenaar-terraform-states"
-    key     = "infrastructure/terraform.tfstate"
+    region = "ca-central-1"
+    bucket = "stollenaar-terraform-states"
+    key    = "infrastructure/terraform.tfstate"
   }
 }
 
@@ -12,9 +12,9 @@ data "terraform_remote_state" "statisticsbot" {
   backend = "s3"
   config = {
     # profile = local.used_profile.name
-    region  = "ca-central-1"
-    bucket  = "stollenaar-terraform-states"
-    key     = "discordbots/statisticsBot.tfstate"
+    region = "ca-central-1"
+    bucket = "stollenaar-terraform-states"
+    key    = "discordbots/statisticsBot.tfstate"
   }
 }
 
@@ -26,6 +26,14 @@ data "aws_caller_identity" "current" {}
 
 data "aws_lambda_layer_version" "ffmpeg_layer" {
   layer_name = "ffmpeg"
+}
+
+data "aws_lambda_layer_version" "tailscale_layer" {
+  layer_name = "tailscale"
+}
+
+data "aws_ssm_parameter" "tailscale_key" {
+  name = "/tailscale/aws-lambda/secret"
 }
 
 # IAM policy document for the Lambda to access the parameter store
@@ -170,6 +178,16 @@ data "aws_iam_policy_document" "lambda_execution_invocation_document" {
     ]
     resources = [
       "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:*",
+    ]
+  }
+  statement {
+    sid    = "PublishSNS"
+    effect = "Allow"
+    actions = [
+      "sns:Publish"
+    ]
+    resources = [
+      aws_sns_topic.router_sns.arn
     ]
   }
 }

@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/stollenaar/copypastabotv2/internal/util"
-	statsUtil "github.com/stollenaar/statisticsbot/util"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -36,7 +35,7 @@ var (
 
 type Queue struct {
 	synthed   *polly.SynthesizeSpeechOutput
-	sqsObject statsUtil.SQSObject
+	sqsObject util.SQSObject
 	userID    string
 }
 
@@ -72,7 +71,7 @@ func main() {
 }
 
 func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
-	var sqsObject statsUtil.SQSObject
+	var sqsObject util.SQSObject
 
 	err := json.Unmarshal([]byte(sqsEvent.Records[0].Body), &sqsObject)
 	if err != nil {
@@ -84,7 +83,7 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 }
 
 // Command create a tts experience for the generated markov
-func synthData(object statsUtil.SQSObject) error {
+func synthData(object util.SQSObject) error {
 	message, err := util.GetMessageObject(object)
 	if err != nil {
 		if err.Error() == "object token is a snowflake" {

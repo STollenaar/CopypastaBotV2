@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -13,13 +12,12 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/stollenaar/copypastabotv2/internal/util"
-	statsUtil "github.com/stollenaar/statisticsbot/util"
 
 	"github.com/bwmarrin/discordgo"
 )
 
 var (
-	sqsClient      *sqs.Client
+	sqsClient *sqs.Client
 )
 
 func init() {
@@ -37,24 +35,26 @@ func main() {
 	lambda.Start(handler)
 }
 
-func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	response := discordgo.InteractionResponse{
-		Data: &discordgo.InteractionResponseData{
-			Content: fmt.Sprintln("Loading..."),
-			Flags:   discordgo.MessageFlagsEphemeral,
-		},
-		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
-	}
-
+func handler(snsEvent events.SNSEvent) error {
+	var req events.APIGatewayProxyRequest
 	var interaction discordgo.Interaction
-	json.Unmarshal([]byte(req.Body), &interaction)
+	var response discordgo.WebhookEdit
+
+	err := json.Unmarshal([]byte(snsEvent.Records[0].SNS.Message), &req)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal([]byte(req.Body), &interaction)
+	if err != nil {
+		return err
+	}
 
 	parsedArguments := util.ParseArguments([]string{"name"}, interaction.ApplicationCommandData().Options)
 	if parsedArguments["Name"] == "" {
 		parsedArguments["Name"] = "all"
 	}
 
-	sqsMessage := statsUtil.SQSObject{
+	sqsMessage := util.SQSObject{
 		Token:         interaction.Token,
 		Command:       "browse",
 		GuildID:       interaction.GuildID,
@@ -62,21 +62,17 @@ func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 		Data:          parsedArguments["Name"],
 	}
 	sqsMessageData, _ := json.Marshal(sqsMessage)
-	_, err := sqsClient.SendMessage(context.TODO(), &sqs.SendMessageInput{
+	_, err = sqsClient.SendMessage(context.TODO(), &sqs.SendMessageInput{
 		MessageBody: aws.String(string(sqsMessageData)),
 		QueueUrl:    aws.String(util.ConfigFile.AWS_SQS_URL),
 	})
 	if err != nil {
 		fmt.Println(err)
+		return err
 	}
 
 	data, _ := json.Marshal(response)
 	fmt.Printf("Responding with %s\n", string(data))
-	return events.APIGatewayProxyResponse{
-		StatusCode: http.StatusOK,
-		Headers: map[string]string{
-			"Content-Type": "application/json",
-		},
-		Body: string(data),
-	}, nil
+	_, err = util.SendRequest("PATCH", interaction.AppID, interaction.Token, util.WEBHOOK, data)
+	return err
 }

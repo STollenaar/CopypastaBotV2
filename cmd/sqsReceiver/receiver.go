@@ -16,13 +16,12 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/stollenaar/copypastabotv2/internal/util"
 	"github.com/stollenaar/copypastabotv2/pkg/markov"
-	statsUtil "github.com/stollenaar/statisticsbot/util"
 )
 
 var (
 	sqsClient   *sqs.Client
 	sendTimeout = true
-	sqsObject   statsUtil.SQSObject
+	sqsObject   util.SQSObject
 )
 
 func init() {
@@ -115,7 +114,7 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 		}
 		return err
 	case "speak":
-		sqsMessage := statsUtil.SQSObject{
+		sqsMessage := util.SQSObject{
 			Token:         sqsObject.Token,
 			Type:          sqsObject.Type,
 			Command:       "speak",

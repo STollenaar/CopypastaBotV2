@@ -110,3 +110,20 @@ resource "aws_lambda_permission" "help_receiver_lambda_invocation" {
 
   source_arn = aws_sqs_queue.help_request.arn
 }
+
+# Event source from SQS
+resource "aws_lambda_event_source_mapping" "dunce_receiver_lambda_source" {
+  event_source_arn = data.terraform_remote_state.statisticsbot.outputs.sqs.request.arn
+  enabled          = true
+  function_name    = module.lambda_functions.lambda_functions["dunceReceiver"].function_name
+  batch_size       = 1
+}
+
+resource "aws_lambda_permission" "dunce_receiver_lambda_invocation" {
+  statement_id  = "AllowExecutionFromSQS"
+  action        = "lambda:InvokeFunction"
+  function_name = module.lambda_functions.lambda_functions["dunceReceiver"].function_name
+  principal     = "sqs.amazonaws.com"
+
+  source_arn = data.terraform_remote_state.statisticsbot.outputs.sqs.request.arn
+}

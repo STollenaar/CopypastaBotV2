@@ -1,21 +1,17 @@
-module github.com/stollenaar/copypastabotv2/cmd/sqsReceiver
+module github.com/stollenaar/copypastabotv2/cmd/dunceReceiver
 
 go 1.21.1
 
 require (
 	github.com/aws/aws-lambda-go v1.44.0
-	github.com/aws/aws-sdk-go-v2 v1.24.1
-	github.com/aws/aws-sdk-go-v2/config v1.26.3
-	github.com/aws/aws-sdk-go-v2/service/sqs v1.29.7
 	github.com/bwmarrin/discordgo v0.27.2-0.20240104191117-afc57886f91a
-	github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20231003140913-dd656b441907
-	github.com/stollenaar/copypastabotv2/pkg/markov v0.0.0-20230921225706-a9f4b360581c
+	github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20230924150725-bbdf152a1528
 
 )
 
 require (
-	github.com/PuerkitoBio/goquery v1.8.0 // indirect
-	github.com/andybalholm/cascadia v1.3.1 // indirect
+	github.com/aws/aws-sdk-go-v2 v1.24.1 // indirect
+	github.com/aws/aws-sdk-go-v2/config v1.26.3 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.16.14 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.14.11 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.2.10 // indirect
@@ -45,5 +41,3 @@ require (
 )
 
 replace github.com/stollenaar/copypastabotv2/internal/util => ../../internal/util
-
-replace github.com/stollenaar/copypastabotv2/pkg/markov => ../../pkg/markov

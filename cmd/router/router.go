@@ -13,15 +13,17 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	lambdaService "github.com/aws/aws-sdk-go-v2/service/lambda"
+	"github.com/aws/aws-sdk-go-v2/service/sns"
+	"github.com/aws/aws-sdk-go-v2/service/sns/types"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/bwmarrin/discordgo"
 	"github.com/stollenaar/copypastabotv2/internal/util"
-	statsUtil "github.com/stollenaar/statisticsbot/util"
 )
 
 var (
 	lambdaClient *lambdaService.Client
 	sqsClient    *sqs.Client
+	snsClient    *sns.Client
 )
 
 func init() {
@@ -33,6 +35,7 @@ func init() {
 	}
 	lambdaClient = lambdaService.NewFromConfig(cfg)
 	sqsClient = sqs.NewFromConfig(cfg)
+	snsClient = sns.NewFromConfig(cfg)
 }
 
 func main() {
@@ -53,7 +56,12 @@ func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 	}
 
 	var interaction discordgo.Interaction
-	var response discordgo.InteractionResponse
+	response := discordgo.InteractionResponse{
+		Data: &discordgo.InteractionResponseData{
+			Content: fmt.Sprintln("Loading..."),
+		},
+		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+	}
 	apiResponse := events.APIGatewayProxyResponse{
 		StatusCode: http.StatusOK,
 		Headers: map[string]string{
@@ -67,10 +75,10 @@ func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 		response.Type = discordgo.InteractionResponsePong
 	} else if interaction.Type == discordgo.InteractionMessageComponent {
 		response.Type = discordgo.InteractionResponseDeferredMessageUpdate
-		var sqsMessage statsUtil.SQSObject
+		var sqsMessage util.SQSObject
 		var queue string
 		if interaction.MessageComponentData().CustomID == "command_select" {
-			sqsMessage = statsUtil.SQSObject{
+			sqsMessage = util.SQSObject{
 				Token:         interaction.Token,
 				Command:       interaction.MessageComponentData().Values[0],
 				GuildID:       interaction.GuildID,
@@ -79,7 +87,7 @@ func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 			}
 			queue = util.ConfigFile.AWS_SQS_URL_OTHER[0]
 		} else {
-			sqsMessage = statsUtil.SQSObject{
+			sqsMessage = util.SQSObject{
 				Token:         interaction.Token,
 				Command:       "browse",
 				GuildID:       interaction.GuildID,
@@ -137,15 +145,21 @@ func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 				cmd = "speak"
 			}
 
+
 			// Routing the commands to the correctly lambda that will handle it
-			out, err := lambdaClient.Invoke(context.TODO(), &lambdaService.InvokeInput{
-				FunctionName: aws.String(fmt.Sprintf("copypastabot-%s", cmd)),
-				Payload:      d,
+			messageAttributes := make(map[string]types.MessageAttributeValue)
+			messageAttributes["function_name"] = types.MessageAttributeValue{
+				DataType:    aws.String("String"),
+				StringValue: aws.String(cmd),
+			}
+			_, err := snsClient.Publish(context.TODO(), &sns.PublishInput{
+				TopicArn:          &util.ConfigFile.AWS_SNS_TOPIC_ARN,
+				Message:           aws.String(string(d)),
+				MessageAttributes: messageAttributes,
 			})
+
 			if err != nil {
 				apiResponse.Body = err.Error()
-			} else {
-				json.Unmarshal(out.Payload, &apiResponse)
 			}
 		}
 	}

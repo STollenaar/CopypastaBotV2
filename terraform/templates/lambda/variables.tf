@@ -5,6 +5,7 @@ variable "functions" {
     runtime                        = string
     timeout                        = number
     memory_size                    = number
+    image_uri                      = optional(string, null)
     layers                         = optional(list(string), [])
     override_zip_location          = optional(string, null)
     reserved_concurrent_executions = optional(number, -1)

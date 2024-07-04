@@ -14,7 +14,6 @@ import (
 	"github.com/stollenaar/copypastabotv2/internal/util"
 
 	"github.com/bwmarrin/discordgo"
-	statsUtil "github.com/stollenaar/statisticsbot/util"
 )
 
 type browserTracker struct {
@@ -44,7 +43,7 @@ func main() {
 }
 
 func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
-	var sqsObject statsUtil.SQSObject
+	var sqsObject util.SQSObject
 	err := json.Unmarshal([]byte(sqsEvent.Records[0].Body), &sqsObject)
 	if err != nil {
 		fmt.Println(err)
