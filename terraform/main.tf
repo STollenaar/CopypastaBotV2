@@ -85,9 +85,20 @@ locals {
       environment_variables = {
         AWS_DISCORD_WEBHOOK_ID    = "/discord/webhook/id"
         AWS_DISCORD_WEBHOOK_TOKEN = "/discord/webhook/token"
-        # DISCORD_WEBHOOK_ID    = "1256008646828228618"
-        # DISCORD_WEBHOOK_TOKEN = "x7H8AydI8-0dglXoec1jc-qCqvGj1n3wMTgo9kBWG4eZ4jI4nKFe6veodaLMbBvQFoUh"
-        OPENAI_KEY            = "/openai/api_key"
+        OPENAI_KEY = "/openai/api_key"
+      }
+    }
+    eggReceiver = {
+      description       = "Egg receiver for CopypastaBot"
+      runtime           = "provided.al2"
+      handler           = "bootstrap"
+      timeout           = 60 * 5
+      memory_size       = 128
+      extra_permissions = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json]
+      environment_variables = {
+        AWS_DISCORD_CHANNEL_ID      = "/discord/egg_channel"
+        AWS_PARAMETER_DISCORD_TOKEN = "/discord_tokens/${local.name}"
+        DATE_STRING                 = "2024-07-14"
       }
     }
 

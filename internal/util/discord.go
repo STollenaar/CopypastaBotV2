@@ -17,10 +17,12 @@ const (
 	API_URL          = "https://discord.com/api/v10/%s/%s/%s"
 	INTERACTION KIND = "interactions"
 	WEBHOOK     KIND = "webhooks"
+	MESSAGE     KIND = "message"
 
 	POST_URL         = "https://discord.com/api/v10/interactions/%s/%s/callback"
 	WEBHOOK_POST_URL = "https://discord.com/api/v10/webhooks/%s/%s"
 	PATCH_URL        = "https://discord.com/api/v10/webhooks/%s/%s/messages/%s"
+	MESSAGE_URL      = "https://discord.com/api/v10/channels/%s/messages"
 )
 
 func SendError(sqsObject SQSObject) {
@@ -41,18 +43,24 @@ func SendRequest(method, interactionID, interactionToken string, kind KIND, data
 	var err error
 	var req *http.Request
 
-	if kind == INTERACTION {
+	switch kind {
+	case INTERACTION:
 		url += "callback"
-	} else {
+		url = fmt.Sprintf(url, kind, interactionID, interactionToken)
+	case MESSAGE:
+		url = MESSAGE_URL
+		url = fmt.Sprintf(url, interactionID)
+	default:
 		url += "/messages/"
 		if len(messageID) == 0 {
 			url += "@original"
 		} else {
 			url += messageID[0]
 		}
+		url = fmt.Sprintf(url, kind, interactionID, interactionToken)
 	}
 
-	req, err = http.NewRequest(method, fmt.Sprintf(url, kind, interactionID, interactionToken), bytes.NewBuffer(data))
+	req, err = http.NewRequest(method, url, bytes.NewBuffer(data))
 
 	if err != nil {
 		fmt.Println(err)

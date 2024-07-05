@@ -29,6 +29,7 @@ type Config struct {
 	DISCORD_TOKEN         string
 	DISCORD_WEBHOOK_ID    string
 	DISCORD_WEBHOOK_TOKEN string
+	DISCORD_CHANNEL_ID    string
 
 	REDDIT_USERNAME      string
 	REDDIT_PASSWORD      string
@@ -37,6 +38,7 @@ type Config struct {
 
 	AWS_REGION string
 
+	AWS_DISCORD_CHANNEL_ID      string
 	AWS_PARAMETER_DISCORD_TOKEN string
 	AWS_DISCORD_WEBHOOK_ID      string
 	AWS_DISCORD_WEBHOOK_TOKEN   string
@@ -53,6 +55,8 @@ type Config struct {
 	TERMINAL_REGEX string
 	STATISTICS_BOT string
 	OPENAI_KEY     string
+
+	DATE_STRING string
 }
 
 var (
@@ -94,6 +98,7 @@ func init() {
 
 	ConfigFile = &Config{
 		DISCORD_TOKEN:                      os.Getenv("DISCORD_TOKEN"),
+		DISCORD_CHANNEL_ID:                 os.Getenv("DISCORD_CHANNEL_ID"),
 		DISCORD_WEBHOOK_ID:                 os.Getenv("DISCORD_WEBHOOK_ID"),
 		DISCORD_WEBHOOK_TOKEN:              os.Getenv("DISCORD_WEBHOOK_TOKEN"),
 		AWS_REGION:                         os.Getenv("AWS_REGION"),
@@ -101,6 +106,7 @@ func init() {
 		AWS_SQS_URL:                        os.Getenv("AWS_SQS_URL"),
 		AWS_SQS_URL_OTHER:                  strings.Split(os.Getenv("AWS_SQS_URL_OTHER"), ";"),
 		AWS_PARAMETER_DISCORD_TOKEN:        os.Getenv("AWS_PARAMETER_DISCORD_TOKEN"),
+		AWS_DISCORD_CHANNEL_ID:             os.Getenv("AWS_DISCORD_CHANNEL_ID"),
 		AWS_DISCORD_WEBHOOK_ID:             os.Getenv("AWS_DISCORD_WEBHOOK_ID"),
 		AWS_DISCORD_WEBHOOK_TOKEN:          os.Getenv("AWS_DISCORD_WEBHOOK_TOKEN"),
 		AWS_PARAMETER_PUBLIC_DISCORD_TOKEN: os.Getenv("AWS_PARAMETER_PUBLIC_DISCORD_TOKEN"),
@@ -115,6 +121,7 @@ func init() {
 		TERMINAL_REGEX:                     os.Getenv("TERMINAL_REGEX"),
 		STATISTICS_BOT:                     os.Getenv("STATSBOT_URL"),
 		OPENAI_KEY:                         os.Getenv("OPENAI_KEY"),
+		DATE_STRING:                        os.Getenv("DATE_STRING"),
 	}
 
 	if ConfigFile.TERMINAL_REGEX == "" {
@@ -226,6 +233,18 @@ func (c *Config) GetRedditClientSecret() (string, error) {
 		return c.REDDIT_CLIENT_SECRET, nil
 	}
 	return getAWSParameter(c.AWS_PARAMETER_REDDIT_CLIENT_SECRET)
+}
+
+func (c *Config) GetDiscordChannelID() (string, error) {
+	if c.AWS_DISCORD_CHANNEL_ID == "" && c.DISCORD_CHANNEL_ID == "" {
+		return "", fmt.Errorf("AWS_DISCORD_CHANNEL_ID or DISCORD_CHANNEL_ID is not set: %s", string(debug.Stack()))
+	}
+
+	if c.DISCORD_CHANNEL_ID != "" {
+		return c.DISCORD_CHANNEL_ID, nil
+	}
+
+	return getAWSParameter(c.AWS_DISCORD_CHANNEL_ID)
 }
 
 func getAWSParameter(parameterName string) (string, error) {
