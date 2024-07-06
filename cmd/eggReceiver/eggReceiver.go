@@ -26,7 +26,7 @@ var (
 	channelID string
 	reg       = regexp.MustCompile("[0-9]")
 	reader    = strings.NewReader(font)
-	date time.Time
+	date      time.Time
 )
 
 func main() {
@@ -49,22 +49,24 @@ func init() {
 }
 
 func handler(ctx context.Context) error {
-	until := int(math.Ceil(time.Until(date).Hours()/24))
+	until := int(math.Ceil(time.Until(date).Hours() / 24))
 
-	var input string
+	var number string
+	input := strconv.Itoa(until)
 	if until < 0 {
 		return nil
 	} else if until == 0 {
 		input = "EGG IS COOKED"
+		number = figure.NewFigureWithFont(input, reader, true).String()
+		number = equalise(number)
+		number = reg.ReplaceAllString(number, ":chicken:")
+		number = strings.ReplaceAll(number, " ", "||<:jar:>||")
 	} else {
-		input = strconv.Itoa(until)
+		number = figure.NewFigureWithFont(input, reader, true).String()
+		number = equalise(number)
+		number = reg.ReplaceAllString(number, ":egg:")
+		number = strings.ReplaceAll(number, " ", "||<:jam:1258555405701873776>||")
 	}
-
-	number := figure.NewFigureWithFont(input, reader, true).String()
-	number = equalise(number)
-
-	number = reg.ReplaceAllString(number, ":egg:")
-	number = strings.ReplaceAll(number, " ", "||<:jam:1258555405701873776>||")
 
 	response := discordgo.MessageCreate{
 		Message: &discordgo.Message{
