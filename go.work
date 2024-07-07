@@ -20,4 +20,5 @@ use (
 	./internal/util
 	./pkg/markov
 	./tools/register
+    ./tools/describe
 )
