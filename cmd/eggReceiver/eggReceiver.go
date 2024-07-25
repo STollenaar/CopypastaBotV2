@@ -24,10 +24,15 @@ var (
 	font string
 
 	channelID string
-	reg       = regexp.MustCompile("[0-9]")
+	regN      = regexp.MustCompile("[0-9]")
+	regS      = regexp.MustCompile("[a-zA-Z?]")
 	reader    = strings.NewReader(font)
 	date      time.Time
 )
+
+type Event struct {
+	Message string `json:"message"`
+}
 
 func main() {
 	lambda.Start(handler)
@@ -48,30 +53,72 @@ func init() {
 	date = d
 }
 
-func handler(ctx context.Context) error {
-	until := int(math.Ceil(time.Until(date).Hours() / 24))
+func handler(ctx context.Context, event *Event) error {
 
-	var number string
-	input := strconv.Itoa(until)
-	if until < 0 {
-		return nil
-	} else if until == 0 {
-		input = "EGG IS COOKED"
-		number = figure.NewFigureWithFont(input, reader, true).String()
-		number = equalise(number)
-		number = reg.ReplaceAllString(number, ":chicken:")
-		number = strings.ReplaceAll(number, " ", "||<:jar:>||")
+	var output []string
+	if event != nil && event.Message != "" {
+		input := strings.Split(event.Message, " ")
+		for _, in := range input {
+			tmp := figure.NewFigureWithFont(in, reader, true).String()
+			tmp = equalise(tmp)
+			tmp = regS.ReplaceAllString(tmp, ":egg:")
+			tmp = strings.ReplaceAll(tmp, " ", "||<:jam:1258555405701873776>||")
+			output = append(output, tmp)
+			reader = strings.NewReader(font)
+		}
 	} else {
-		number = figure.NewFigureWithFont(input, reader, true).String()
-		number = equalise(number)
-		number = reg.ReplaceAllString(number, ":egg:")
-		number = strings.ReplaceAll(number, " ", "||<:jam:1258555405701873776>||")
+
+		until := int(math.Ceil(time.Until(date).Hours() / 24))
+
+		input := []string{strconv.Itoa(until)}
+		if util.ConfigFile.DATE_STRING == "0000-01-01" {
+			input[0] = "EGG?"
+
+			for _, in := range input {
+				tmp := figure.NewFigureWithFont(in, reader, true).String()
+				tmp = equalise(tmp)
+				tmp = regS.ReplaceAllString(tmp, ":egg:")
+				tmp = strings.ReplaceAll(tmp, " ", "||<:jam:1258555405701873776>||")
+				output = append(output, tmp)
+				reader = strings.NewReader(font)
+			}
+
+		} else if until < 0 {
+			return nil
+		} else if until == 0 {
+			input[0] = "EGG"
+			input = append(input, "IS")
+			input = append(input, "DONE")
+			for _, in := range input {
+				tmp := figure.NewFigureWithFont(in, reader, true).String()
+				tmp = equalise(tmp)
+				tmp = regS.ReplaceAllString(tmp, ":chicken:")
+				tmp = strings.ReplaceAll(tmp, " ", "||<:jar:>||")
+				output = append(output, tmp)
+				reader = strings.NewReader(font)
+			}
+
+		} else {
+			tmp := figure.NewFigureWithFont(input[0], reader, true).String()
+			tmp = equalise(tmp)
+			tmp = regN.ReplaceAllString(tmp, ":egg:")
+			tmp = strings.ReplaceAll(tmp, " ", "||<:jam:1258555405701873776>||")
+			output = append(output, tmp)
+		}
 	}
+	var embeds []*discordgo.MessageEmbed
+	for _, in := range output {
+		embeds = append(embeds, &discordgo.MessageEmbed{
+			Description: in,
+			Type:        discordgo.EmbedTypeRich,
+		})
+	}
+	// embeds[0].Title = "EGG STATUS"
 
 	response := discordgo.MessageCreate{
 		Message: &discordgo.Message{
-			Content: number,
-			Flags:   discordgo.MessageFlagsUrgent,
+			Embeds:  embeds,
+			Content: "",
 		},
 	}
 
