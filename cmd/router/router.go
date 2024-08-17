@@ -1,42 +1,17 @@
 package main
 
 import (
-	"context"
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
-	lambdaService "github.com/aws/aws-sdk-go-v2/service/lambda"
-	"github.com/aws/aws-sdk-go-v2/service/sns"
-	"github.com/aws/aws-sdk-go-v2/service/sns/types"
-	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/bwmarrin/discordgo"
 	"github.com/stollenaar/copypastabotv2/internal/util"
 )
 
-var (
-	lambdaClient *lambdaService.Client
-	sqsClient    *sqs.Client
-	snsClient    *sns.Client
-)
-
-func init() {
-	// Create a config with the credentials provider.
-	cfg, err := config.LoadDefaultConfig(context.TODO())
-
-	if err != nil {
-		log.Fatal("Error loading AWS config:", err)
-	}
-	lambdaClient = lambdaService.NewFromConfig(cfg)
-	sqsClient = sqs.NewFromConfig(cfg)
-	snsClient = sns.NewFromConfig(cfg)
-}
 
 func main() {
 	lambda.Start(handler)
@@ -75,33 +50,30 @@ func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 		response.Type = discordgo.InteractionResponsePong
 	} else if interaction.Type == discordgo.InteractionMessageComponent {
 		response.Type = discordgo.InteractionResponseDeferredMessageUpdate
-		var sqsMessage util.SQSObject
-		var queue string
+		var sqsMessage util.Object
+		var destination string
 		if interaction.MessageComponentData().CustomID == "command_select" {
-			sqsMessage = util.SQSObject{
+			sqsMessage = util.Object{
 				Token:         interaction.Token,
 				Command:       interaction.MessageComponentData().Values[0],
 				GuildID:       interaction.GuildID,
 				ApplicationID: interaction.AppID,
 				Data:          interaction.MessageComponentData().CustomID,
 			}
-			queue = util.ConfigFile.AWS_SQS_URL_OTHER[0]
+			destination = "helpReceiver"
 		} else {
-			sqsMessage = util.SQSObject{
+			sqsMessage = util.Object{
 				Token:         interaction.Token,
 				Command:       "browse",
 				GuildID:       interaction.GuildID,
 				ApplicationID: interaction.AppID,
 				Data:          interaction.MessageComponentData().CustomID,
 			}
-			queue = util.ConfigFile.AWS_SQS_URL
+			destination = "browseReceiver"
 		}
 		sqsMessageData, _ := json.Marshal(sqsMessage)
-		_, err := sqsClient.SendMessage(context.TODO(), &sqs.SendMessageInput{
-			MessageBody:  aws.String(string(sqsMessageData)),
-			QueueUrl:     &queue,
-			DelaySeconds: *aws.Int32(2),
-		})
+		err := util.PublishObject(destination, string(sqsMessageData))
+
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -145,18 +117,8 @@ func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 				cmd = "speak"
 			}
 
-
 			// Routing the commands to the correctly lambda that will handle it
-			messageAttributes := make(map[string]types.MessageAttributeValue)
-			messageAttributes["function_name"] = types.MessageAttributeValue{
-				DataType:    aws.String("String"),
-				StringValue: aws.String(cmd),
-			}
-			_, err := snsClient.Publish(context.TODO(), &sns.PublishInput{
-				TopicArn:          &util.ConfigFile.AWS_SNS_TOPIC_ARN,
-				Message:           aws.String(string(d)),
-				MessageAttributes: messageAttributes,
-			})
+			err := util.PublishObject(cmd, string(d))
 
 			if err != nil {
 				apiResponse.Body = err.Error()

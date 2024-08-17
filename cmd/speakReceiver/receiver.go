@@ -35,7 +35,7 @@ var (
 
 type Queue struct {
 	synthed   *polly.SynthesizeSpeechOutput
-	sqsObject util.SQSObject
+	sqsObject util.Object
 	userID    string
 }
 
@@ -70,10 +70,10 @@ func main() {
 	lambda.Start(handler)
 }
 
-func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
-	var sqsObject util.SQSObject
+func handler(snsEvent events.SNSEvent) error {
+	var sqsObject util.Object
 
-	err := json.Unmarshal([]byte(sqsEvent.Records[0].Body), &sqsObject)
+	err := json.Unmarshal([]byte(snsEvent.Records[0].SNS.Message), &sqsObject)
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -83,7 +83,7 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 }
 
 // Command create a tts experience for the generated markov
-func synthData(object util.SQSObject) error {
+func synthData(object util.Object) error {
 	message, err := util.GetMessageObject(object)
 	if err != nil {
 		if err.Error() == "object token is a snowflake" {

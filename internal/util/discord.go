@@ -25,7 +25,7 @@ const (
 	MESSAGE_URL      = "https://discord.com/api/v10/channels/%s/messages"
 )
 
-func SendError(sqsObject SQSObject) {
+func SendError(sqsObject Object) {
 	e := "If you see this, and error likely happened. Whoops"
 	response := discordgo.WebhookEdit{
 		Content: &e,

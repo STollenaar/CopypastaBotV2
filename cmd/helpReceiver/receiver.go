@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 
@@ -15,15 +14,15 @@ import (
 )
 
 var (
-	sqsObject util.SQSObject
+	sqsObject util.Object
 )
 
 func main() {
 	lambda.Start(handler)
 }
 
-func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
-	err := json.Unmarshal([]byte(sqsEvent.Records[0].Body), &sqsObject)
+func handler(snsEvent events.SNSEvent) error {
+	err := json.Unmarshal([]byte(snsEvent.Records[0].SNS.Message), &sqsObject)
 	if err != nil {
 		fmt.Println(err)
 		return err

@@ -2,18 +2,13 @@ package main
 
 import (
 	"bytes"
-	"context"
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/bwmarrin/discordgo"
 	"github.com/stollenaar/copypastabotv2/internal/util"
 )
@@ -26,20 +21,9 @@ var (
 	//go:embed cavemanRole.txt
 	systemCaveman string
 
-	sqsClient   *sqs.Client
 	sendTimeout = true
-	sqsObject   util.SQSObject
+	sqsObject   util.Object
 )
-
-func init() {
-	// Create a config with the credentials provider.
-	cfg, err := config.LoadDefaultConfig(context.TODO())
-
-	if err != nil {
-		log.Fatal("Error loading AWS config:", err)
-	}
-	sqsClient = sqs.NewFromConfig(cfg)
-}
 
 func main() {
 	lambda.StartWithOptions(handler, lambda.WithEnableSIGTERM(timeoutHandler))
@@ -57,8 +41,8 @@ func timeoutHandler() {
 	}
 }
 
-func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
-	err := json.Unmarshal([]byte(sqsEvent.Records[0].Body), &sqsObject)
+func handler(snsEvent events.SNSEvent) error {
+	err := json.Unmarshal([]byte(snsEvent.Records[0].SNS.Message), &sqsObject)
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -152,10 +136,7 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 	case "speak":
 		sqsObject.Data = chatRSP.Choices[0].Message.Content
 		sqsMessageData, _ := json.Marshal(sqsObject)
-		_, err := sqsClient.SendMessage(context.TODO(), &sqs.SendMessageInput{
-			MessageBody: aws.String(string(sqsMessageData)),
-			QueueUrl:    aws.String(util.ConfigFile.AWS_SQS_URL),
-		})
+		err := util.PublishObject("speakReceiver", string(sqsMessageData))
 		if err != nil {
 			sendTimeout = false
 			fmt.Println(err)

@@ -266,7 +266,7 @@ func (c *Config) GetOpenAIKey() (string, error) {
 	return getAWSParameter(c.OPENAI_KEY)
 }
 
-func (c *Config) SendStatsBotRequest(sqsObject SQSObject) error {
+func (c *Config) SendStatsBotRequest(sqsObject Object) error {
 	jsonData, err := json.Marshal(sqsObject)
 	if err != nil {
 		return err

@@ -62,6 +62,16 @@ data "aws_iam_policy_document" "lambda_execution_role_policy_document" {
     ]
     resources = ["*"]
   }
+  statement {
+    sid    = "PublishSNS"
+    effect = "Allow"
+    actions = [
+      "sns:Publish"
+    ]
+    resources = [
+      aws_sns_topic.router_sns.arn
+    ]
+  }
 }
 
 # IAM policy document for the container to access the sqs queue
@@ -82,76 +92,76 @@ data "aws_iam_policy_document" "sqs_role_policy_document" {
     ]
   }
 }
-# IAM policy document for the container to access the sqs queue
-data "aws_iam_policy_document" "browse_sqs_role_policy_document" {
-  statement {
-    sid    = "SQSBrowseSendMessage"
-    effect = "Allow"
-    actions = [
-      "sqs:DeleteMessage",
-      "sqs:GetQueueAttributes",
-      "sqs:GetQueueUrl",
-      "sqs:ReceiveMessage",
-      "sqs:SendMessage",
-    ]
-    resources = [
-      aws_sqs_queue.browse_request.arn
-    ]
-  }
-}
-# IAM policy document for the container to access the sqs queue
-data "aws_iam_policy_document" "speak_sqs_role_policy_document" {
-  statement {
-    sid    = "SQSSpeakSendMessage"
-    effect = "Allow"
-    actions = [
-      "sqs:DeleteMessage",
-      "sqs:GetQueueAttributes",
-      "sqs:GetQueueUrl",
-      "sqs:ReceiveMessage",
-      "sqs:SendMessage",
-    ]
-    resources = [
-      aws_sqs_queue.speak_request.arn
-    ]
-  }
-}
+# # IAM policy document for the container to access the sqs queue
+# data "aws_iam_policy_document" "browse_sqs_role_policy_document" {
+#   statement {
+#     sid    = "SQSBrowseSendMessage"
+#     effect = "Allow"
+#     actions = [
+#       "sqs:DeleteMessage",
+#       "sqs:GetQueueAttributes",
+#       "sqs:GetQueueUrl",
+#       "sqs:ReceiveMessage",
+#       "sqs:SendMessage",
+#     ]
+#     resources = [
+#       aws_sqs_queue.browse_request.arn
+#     ]
+#   }
+# }
+# # IAM policy document for the container to access the sqs queue
+# data "aws_iam_policy_document" "speak_sqs_role_policy_document" {
+#   statement {
+#     sid    = "SQSSpeakSendMessage"
+#     effect = "Allow"
+#     actions = [
+#       "sqs:DeleteMessage",
+#       "sqs:GetQueueAttributes",
+#       "sqs:GetQueueUrl",
+#       "sqs:ReceiveMessage",
+#       "sqs:SendMessage",
+#     ]
+#     resources = [
+#       aws_sqs_queue.speak_request.arn
+#     ]
+#   }
+# }
 
-# IAM policy document for the container to access the sqs queue
-data "aws_iam_policy_document" "chat_sqs_role_policy_document" {
-  statement {
-    sid    = "SQSChatSendMessage"
-    effect = "Allow"
-    actions = [
-      "sqs:DeleteMessage",
-      "sqs:GetQueueAttributes",
-      "sqs:GetQueueUrl",
-      "sqs:ReceiveMessage",
-      "sqs:SendMessage",
-    ]
-    resources = [
-      aws_sqs_queue.chat_request.arn
-    ]
-  }
-}
+# # IAM policy document for the container to access the sqs queue
+# data "aws_iam_policy_document" "chat_sqs_role_policy_document" {
+#   statement {
+#     sid    = "SQSChatSendMessage"
+#     effect = "Allow"
+#     actions = [
+#       "sqs:DeleteMessage",
+#       "sqs:GetQueueAttributes",
+#       "sqs:GetQueueUrl",
+#       "sqs:ReceiveMessage",
+#       "sqs:SendMessage",
+#     ]
+#     resources = [
+#       aws_sqs_queue.chat_request.arn
+#     ]
+#   }
+# }
 
-# IAM policy document for the container to access the sqs queue
-data "aws_iam_policy_document" "help_sqs_role_policy_document" {
-  statement {
-    sid    = "SQSHelpSendMessage"
-    effect = "Allow"
-    actions = [
-      "sqs:DeleteMessage",
-      "sqs:GetQueueAttributes",
-      "sqs:GetQueueUrl",
-      "sqs:ReceiveMessage",
-      "sqs:SendMessage",
-    ]
-    resources = [
-      aws_sqs_queue.help_request.arn
-    ]
-  }
-}
+# # IAM policy document for the container to access the sqs queue
+# data "aws_iam_policy_document" "help_sqs_role_policy_document" {
+#   statement {
+#     sid    = "SQSHelpSendMessage"
+#     effect = "Allow"
+#     actions = [
+#       "sqs:DeleteMessage",
+#       "sqs:GetQueueAttributes",
+#       "sqs:GetQueueUrl",
+#       "sqs:ReceiveMessage",
+#       "sqs:SendMessage",
+#     ]
+#     resources = [
+#       aws_sqs_queue.help_request.arn
+#     ]
+#   }
+# }
 
 # IAM policy document for the container to access the sqs queue
 data "aws_iam_policy_document" "polly_role_policy_document" {
@@ -178,16 +188,6 @@ data "aws_iam_policy_document" "lambda_execution_invocation_document" {
     ]
     resources = [
       "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:*",
-    ]
-  }
-  statement {
-    sid    = "PublishSNS"
-    effect = "Allow"
-    actions = [
-      "sns:Publish"
-    ]
-    resources = [
-      aws_sns_topic.router_sns.arn
     ]
   }
 }

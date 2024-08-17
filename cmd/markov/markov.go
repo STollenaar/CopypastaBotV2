@@ -1,37 +1,16 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/stollenaar/copypastabotv2/internal/util"
 
 	"github.com/bwmarrin/discordgo"
 )
-
-var (
-	sqsClient *sqs.Client
-)
-
-func init() {
-	fmt.Println("Starting init")
-	// Create a config with the credentials provider.
-	cfg, err := config.LoadDefaultConfig(context.TODO())
-
-	if err != nil {
-		log.Fatal("Error loading AWS config:", err)
-	}
-	sqsClient = sqs.NewFromConfig(cfg)
-	fmt.Println("Done init")
-}
 
 func main() {
 	lambda.Start(handler)
@@ -43,15 +22,15 @@ func handler(snsEvent events.SNSEvent) error {
 	var response discordgo.WebhookEdit
 
 	err := json.Unmarshal([]byte(snsEvent.Records[0].SNS.Message), &req)
-	if err !=nil {
+	if err != nil {
 		return err
 	}
 	err = json.Unmarshal([]byte(req.Body), &interaction)
-	if err !=nil {
+	if err != nil {
 		return err
 	}
 
-	sqsMessage := util.SQSObject{
+	sqsMessage := util.Object{
 		Token:         interaction.Token,
 		Command:       "markov",
 		GuildID:       interaction.GuildID,
@@ -65,12 +44,10 @@ func handler(snsEvent events.SNSEvent) error {
 		sqsMessage.Data = url
 
 		sqsMessageData, _ := json.Marshal(sqsMessage)
-		_, err := sqsClient.SendMessage(context.TODO(), &sqs.SendMessageInput{
-			MessageBody: aws.String(string(sqsMessageData)),
-			QueueUrl:    aws.String(util.ConfigFile.AWS_SQS_URL),
-		})
+		err := util.PublishObject("sqsReceiver", string(sqsMessageData))
 		if err != nil {
-			fmt.Println(err)
+			fmt.Printf("Encountered an error while processing the markov command: %v\n", err)
+			return err
 		}
 	} else if user, ok := parsedArguments["User"]; ok {
 		user = strings.ReplaceAll(user, "<", "")

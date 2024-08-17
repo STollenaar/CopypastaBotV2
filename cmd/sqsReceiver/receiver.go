@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -10,28 +9,15 @@ import (
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/bwmarrin/discordgo"
 	"github.com/stollenaar/copypastabotv2/internal/util"
 	"github.com/stollenaar/copypastabotv2/pkg/markov"
 )
 
 var (
-	sqsClient   *sqs.Client
 	sendTimeout = true
-	sqsObject   util.SQSObject
+	sqsObject   util.Object
 )
-
-func init() {
-	// Create a config with the credentials provider.
-	cfg, err := config.LoadDefaultConfig(context.TODO())
-	if err != nil {
-		panic("configuration error, " + err.Error())
-	}
-	sqsClient = sqs.NewFromConfig(cfg)
-}
 
 func main() {
 	lambda.StartWithOptions(handler, lambda.WithEnableSIGTERM(timeoutHandler))
@@ -49,9 +35,9 @@ func timeoutHandler() {
 	}
 }
 
-func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
+func handler(snsEvent events.SNSEvent) error {
 
-	err := json.Unmarshal([]byte(sqsEvent.Records[0].Body), &sqsObject)
+	err := json.Unmarshal([]byte(snsEvent.Records[0].SNS.Message), &sqsObject)
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -114,7 +100,7 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 		}
 		return err
 	case "speak":
-		sqsMessage := util.SQSObject{
+		sqsMessage := util.Object{
 			Token:         sqsObject.Token,
 			Type:          sqsObject.Type,
 			Command:       "speak",
@@ -124,10 +110,7 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 		}
 
 		sqsMessageData, _ := json.Marshal(sqsMessage)
-		_, err := sqsClient.SendMessage(context.TODO(), &sqs.SendMessageInput{
-			MessageBody: aws.String(string(sqsMessageData)),
-			QueueUrl:    aws.String(util.ConfigFile.AWS_SQS_URL),
-		})
+		err := util.PublishObject("speakReceiver", string(sqsMessageData))
 		if _, snerr := strconv.Atoi(sqsObject.Token); snerr != nil && err != nil {
 			sendTimeout = false
 			fmt.Println(err)

@@ -66,7 +66,7 @@ func handler() error {
 		user = strings.ReplaceAll(user, "<", "")
 		user = strings.ReplaceAll(user, ">", "")
 		user = strings.ReplaceAll(user, "@", "")
-		sqsMessage := util.SQSObject{
+		sqsMessage := util.Object{
 			Token:         user,
 			Command:       "speak",
 			Type:          "user",

@@ -33,9 +33,9 @@ locals {
       handler           = "bootstrap"
       timeout           = 60 * 5
       memory_size       = 128
-      extra_permissions = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.browse_sqs_role_policy_document.json]
+      extra_permissions = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json]
       environment_variables = {
-        AWS_SQS_URL = aws_sqs_queue.browse_request.url
+        AWS_SNS_TOPIC_ARN = aws_sns_topic.router_sns.arn
       }
     }
     browseReceiver = {
@@ -44,7 +44,7 @@ locals {
       handler           = "bootstrap"
       timeout           = 60 * 2
       memory_size       = 128
-      extra_permissions = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.browse_sqs_role_policy_document.json]
+      extra_permissions = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json]
       environment_variables = {
         AWS_PARAMETER_REDDIT_USERNAME      = "/reddit/username"
         AWS_PARAMETER_REDDIT_PASSWORD      = "/reddit/password"
@@ -58,9 +58,9 @@ locals {
       handler           = "bootstrap"
       timeout           = 60 * 5
       memory_size       = 128
-      extra_permissions = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.chat_sqs_role_policy_document.json]
+      extra_permissions = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json]
       environment_variables = {
-        AWS_SQS_URL = aws_sqs_queue.chat_request.url
+        AWS_SNS_TOPIC_ARN = aws_sns_topic.router_sns.arn
       }
     }
     chatReceiver = {
@@ -69,10 +69,10 @@ locals {
       handler           = "bootstrap"
       timeout           = 60 * 5
       memory_size       = 128
-      extra_permissions = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.chat_sqs_role_policy_document.json, data.aws_iam_policy_document.speak_sqs_role_policy_document.json]
+      extra_permissions = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json]
       environment_variables = {
-        OPENAI_KEY  = "/openai/api_key"
-        AWS_SQS_URL = aws_sqs_queue.speak_request.url
+        OPENAI_KEY        = "/openai/api_key"
+        AWS_SNS_TOPIC_ARN = aws_sns_topic.router_sns.arn
       }
     }
     dunceReceiver = {
@@ -83,9 +83,11 @@ locals {
       memory_size       = 128
       extra_permissions = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.sqs_role_policy_document.json]
       environment_variables = {
+        DISCORD_WEBHOOK_ID        = "1259968040443969586"
+        DISCORD_WEBHOOK_TOKEN     = "V3TE--tKt5kTIlaJd8N59DzbG26pYq7N0BoQYzNNOr00Ed3t8DLgnzKRvpT3PHSwycve"
         AWS_DISCORD_WEBHOOK_ID    = "/discord/webhook/id"
         AWS_DISCORD_WEBHOOK_TOKEN = "/discord/webhook/token"
-        OPENAI_KEY = "/openai/api_key"
+        OPENAI_KEY                = "/openai/api_key"
       }
     }
     eggReceiver = {
@@ -98,7 +100,7 @@ locals {
       environment_variables = {
         AWS_DISCORD_CHANNEL_ID      = "/discord/egg_channel"
         AWS_PARAMETER_DISCORD_TOKEN = "/discord_tokens/${local.name}"
-        DATE_STRING                 = "2024-07-14"
+        DATE_STRING                 = "2024-07-27"
       }
     }
 
@@ -108,37 +110,36 @@ locals {
       handler           = "bootstrap"
       timeout           = 60 * 5
       memory_size       = 128
-      extra_permissions = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.help_sqs_role_policy_document.json]
+      extra_permissions = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json]
       environment_variables = {
-        AWS_SQS_URL = aws_sqs_queue.help_request.url
+        AWS_SNS_TOPIC_ARN = aws_sns_topic.router_sns.arn
       }
     }
 
     helpReceiver = {
-      description       = "Help command receiver for CopypastaBot"
-      runtime           = "provided.al2"
-      handler           = "bootstrap"
-      timeout           = 60 * 5
-      memory_size       = 128
-      extra_permissions = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.help_sqs_role_policy_document.json]
-      environment_variables = {
-        AWS_SQS_URL = aws_sqs_queue.help_request.url
-      }
+      description           = "Help command receiver for CopypastaBot"
+      runtime               = "provided.al2"
+      handler               = "bootstrap"
+      timeout               = 60 * 5
+      memory_size           = 128
+      extra_permissions     = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json]
+      environment_variables = {}
     }
 
     markov = {
       description = "Markov command for CopypastaBot"
       runtime     = "provided.al2"
-      handler     = "bootstrap"
+      handler     = "bootstrap" # AWS_SQS_URL = aws_sqs_queue.help_request.url
+
       timeout     = 60 * 5
       memory_size = 128
       image_uri   = "405934267152.dkr.ecr.ca-central-1.amazonaws.com/lambdas:markov"
       #   layers            = [data.aws_lambda_layer_version.tailscale_layer.arn]
       extra_permissions = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.sqs_role_policy_document.json]
       environment_variables = {
-        TS_KEY       = data.aws_ssm_parameter.tailscale_key.value
-        AWS_SQS_URL  = data.terraform_remote_state.statisticsbot.outputs.sqs.request.url
-        STATSBOT_URL = "statisticsbot-statisticsbot-ingress.tail88c07.ts.net"
+        TS_KEY            = data.aws_ssm_parameter.tailscale_key.value
+        AWS_SNS_TOPIC_ARN = aws_sns_topic.router_sns.arn
+        STATSBOT_URL      = "statisticsbot-statisticsbot-ingress.tail88c07.ts.net"
       }
     }
     pasta = {
@@ -169,9 +170,9 @@ locals {
       handler           = "bootstrap"
       timeout           = 60 * 5
       memory_size       = 2048
-      extra_permissions = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.sqs_role_policy_document.json, data.aws_iam_policy_document.speak_sqs_role_policy_document.json]
+      extra_permissions = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.sqs_role_policy_document.json]
       environment_variables = {
-        AWS_SQS_URL = aws_sqs_queue.speak_request.url
+        AWS_SNS_TOPIC_ARN = aws_sns_topic.router_sns.arn
       }
     }
     router = {
@@ -181,12 +182,10 @@ locals {
       timeout           = 5
       memory_size       = 128
       buildArgs         = "-ldflags=\"-X 'main.commandsFile=${local.commands_file}'\""
-      extra_permissions = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.lambda_execution_invocation_document.json, data.aws_iam_policy_document.browse_sqs_role_policy_document.json, data.aws_iam_policy_document.help_sqs_role_policy_document.json]
+      extra_permissions = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.lambda_execution_invocation_document.json]
       environment_variables = {
         AWS_PARAMETER_PUBLIC_DISCORD_TOKEN = "/discord_tokens/${local.name}_public",
         AWS_SNS_TOPIC_ARN                  = aws_sns_topic.router_sns.arn
-        AWS_SQS_URL                        = aws_sqs_queue.browse_request.url
-        AWS_SQS_URL_OTHER                  = "${aws_sqs_queue.help_request.url}"
       }
     }
     speak = {
@@ -197,11 +196,10 @@ locals {
       memory_size = 128
       #   layers            = [data.aws_lambda_layer_version.tailscale_layer.arn]
       image_uri         = "405934267152.dkr.ecr.ca-central-1.amazonaws.com/lambdas:speak"
-      extra_permissions = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.sqs_role_policy_document.json, data.aws_iam_policy_document.speak_sqs_role_policy_document.json, data.aws_iam_policy_document.chat_sqs_role_policy_document.json]
+      extra_permissions = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.sqs_role_policy_document.json]
       environment_variables = {
         TS_KEY            = data.aws_ssm_parameter.tailscale_key.value
-        AWS_SQS_URL       = data.terraform_remote_state.statisticsbot.outputs.sqs.request.url
-        AWS_SQS_URL_OTHER = "${aws_sqs_queue.speak_request.url};${aws_sqs_queue.chat_request.url}"
+        AWS_SNS_TOPIC_ARN = aws_sns_topic.router_sns.arn
         STATSBOT_URL      = "statisticsbot-statisticsbot-ingress.tail88c07.ts.net"
       }
     }
@@ -218,7 +216,7 @@ locals {
         TS_KEY                      = data.aws_ssm_parameter.tailscale_key.value
         DEBUG_GUILD                 = "544911814886948865"
         AWS_PARAMETER_DISCORD_TOKEN = "/discord_tokens/${local.name}"
-        AWS_SQS_URL                 = data.terraform_remote_state.statisticsbot.outputs.sqs.request.url
+        AWS_SNS_TOPIC_ARN           = aws_sns_topic.router_sns.arn
         STATSBOT_URL                = "statisticsbot-statisticsbot-ingress.tail88c07.ts.net"
       }
     }
@@ -230,7 +228,7 @@ locals {
       memory_size                    = 512
       layers                         = [data.aws_lambda_layer_version.ffmpeg_layer.arn]
       reserved_concurrent_executions = 1
-      extra_permissions              = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.speak_sqs_role_policy_document.json, data.aws_iam_policy_document.polly_role_policy_document.json]
+      extra_permissions              = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.polly_role_policy_document.json]
       environment_variables = {
         AWS_PARAMETER_DISCORD_TOKEN        = "/discord_tokens/${local.name}"
         AWS_PARAMETER_REDDIT_USERNAME      = "/reddit/username"
