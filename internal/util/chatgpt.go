@@ -6,11 +6,11 @@ import (
 	"log"
 	"strings"
 
-	"github.com/ayush6624/go-chatgpt"
+	"github.com/sashabaranov/go-openai"
 )
 
 var (
-	chatGPTClient *chatgpt.Client
+	chatGPTClient *openai.Client
 
 	//go:embed wrapSSML.txt
 	wrapPrompt string
@@ -22,33 +22,31 @@ func initChatGPT() {
 		log.Fatal(err)
 	}
 
-	chatGPTClient, err = chatgpt.NewClient(openAIKey)
-	if err != nil {
-		log.Fatal(err)
-	}
+	chatGPTClient = openai.NewClient(openAIKey)
 }
 
-func GetChatGPTResponse(systemPrompt, userInput, userID string) (*chatgpt.ChatResponse, error) {
+func GetChatGPTResponse(systemPrompt, userInput, userID string) (openai.ChatCompletionResponse, error) {
 	if chatGPTClient == nil {
 		initChatGPT()
 	}
-	return chatGPTClient.Send(context.TODO(), &chatgpt.ChatCompletionRequest{
-		Model: chatgpt.GPT35Turbo,
+
+	return chatGPTClient.CreateChatCompletion(context.TODO(), openai.ChatCompletionRequest{
+		Model: openai.GPT4oMini,
 		User:  userID,
-		Messages: []chatgpt.ChatMessage{
+		Messages: []openai.ChatCompletionMessage{
 			{
-				Role:    chatgpt.ChatGPTModelRoleSystem,
+				Role:    openai.ChatMessageRoleSystem,
 				Content: systemPrompt,
 			},
 			{
-				Role:    chatgpt.ChatGPTModelRoleUser,
+				Role:    openai.ChatMessageRoleUser,
 				Content: userInput,
 			},
 		},
 	})
 }
 
-func WrapIntoSSML(input, userID string) (*chatgpt.ChatResponse, error) {
+func WrapIntoSSML(input, userID string) (openai.ChatCompletionResponse, error) {
 	return GetChatGPTResponse(wrapPrompt, escapeSSML(input), userID)
 }
 

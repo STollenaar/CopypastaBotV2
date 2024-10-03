@@ -5,9 +5,9 @@ go 1.23.0
 require (
 	github.com/aws/aws-sdk-go-v2/service/sns v1.31.4
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.52.5
-	github.com/ayush6624/go-chatgpt v0.3.0
 	github.com/bwmarrin/discordgo v0.28.1
 	github.com/joho/godotenv v1.5.1
+	github.com/sashabaranov/go-openai v1.31.0
 	golang.org/x/text v0.17.0
 )
 
