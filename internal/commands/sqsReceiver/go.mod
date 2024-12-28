@@ -1,14 +1,18 @@
-module github.com/stollenaar/copypastabotv2/tools/describe
+module github.com/stollenaar/copypastabotv2/internal/commands/sqsReceiver
 
-go 1.23.0
+go 1.23.4
 
 require (
+	github.com/aws/aws-lambda-go v1.47.0
 	github.com/bwmarrin/discordgo v0.28.1
-	github.com/stollenaar/copypastabotv2/internal/util v0.0.0-00010101000000-000000000000
+	github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20241003212403-edcf95f330b2
+	github.com/stollenaar/copypastabotv2/pkg/markov v0.0.0-20241229023436-89c053d6bafb
 
 )
 
 require (
+	github.com/PuerkitoBio/goquery v1.9.2 // indirect
+	github.com/andybalholm/cascadia v1.3.2 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.30.4 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.27.28 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.28 // indirect
@@ -35,7 +39,4 @@ require (
 	golang.org/x/oauth2 v0.22.0 // indirect
 	golang.org/x/sys v0.24.0 // indirect
 	golang.org/x/text v0.17.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace github.com/stollenaar/copypastabotv2/internal/util => ../../internal/util

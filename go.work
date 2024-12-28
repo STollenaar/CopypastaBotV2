@@ -1,24 +1,18 @@
-go 1.23.0
+go 1.23.4
 
 use (
-	./cmd/browse
-	./cmd/browseReceiver
-	./cmd/chat
-	./cmd/chatReceiver
-	./cmd/dunceReceiver
-	./cmd/eggReceiver
-	./cmd/help
-	./cmd/helpReceiver
-	./cmd/markov
-	./cmd/pasta
-	./cmd/ping
-	./cmd/router
-	./cmd/speak
-	./cmd/speakInterrupt
-	./cmd/speakReceiver
-	./cmd/sqsReceiver
+	./internal/commands/browse
+	./internal/commands/chat
+	./internal/commands/help
+	./internal/commands/markov
+	./internal/commands/pasta
+	./internal/commands/router
+	./internal/commands/speak
+	./internal/commands/speakInterrupt
+	./internal/commands/speakReceiver
+	./internal/commands/sqsReceiver
 	./internal/util
 	./pkg/markov
+	./tools/describe
 	./tools/register
-    ./tools/describe
 )

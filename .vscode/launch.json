@@ -5,10 +5,12 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug bot",
+            "name": "Launch Package",
             "type": "go",
             "request": "launch",
-            "program": "${file}",
+            "mode": "auto",
+            "cwd": "cmd/copypastabotv2/",
+            "program": "cmd/copypastabotv2/main.go",
         }
     ]
 }

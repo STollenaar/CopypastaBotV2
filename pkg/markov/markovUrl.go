@@ -1,4 +1,4 @@
-package markov
+package markovpkg
 
 import (
 	URL "net/url"

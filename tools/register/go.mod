@@ -4,7 +4,8 @@ go 1.23.0
 
 require (
 	github.com/bwmarrin/discordgo v0.28.1
-	github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20240725225323-36bafd2d7d9e
+	github.com/stollenaar/copypastabotv2/internal/util v0.0.0-00010101000000-000000000000
+
 )
 
 require github.com/aws/aws-sdk-go-v2/service/sns v1.31.4 // indirect
@@ -24,17 +25,18 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.26.5 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.30.4 // indirect
 	github.com/aws/smithy-go v1.20.4 // indirect
-	github.com/ayush6624/go-chatgpt v0.3.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
+	github.com/sashabaranov/go-openai v1.31.0 // indirect
 	github.com/vartanbeno/go-reddit/v2 v2.0.1 // indirect
 	golang.org/x/crypto v0.26.0 // indirect
 	golang.org/x/net v0.28.0 // indirect
 	golang.org/x/oauth2 v0.22.0 // indirect
 	golang.org/x/sys v0.24.0 // indirect
 	golang.org/x/text v0.17.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
 replace github.com/stollenaar/copypastabotv2/internal/util => ../../internal/util
