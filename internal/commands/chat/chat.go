@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"fmt"
 
+	"github.com/sashabaranov/go-openai"
 	"github.com/stollenaar/copypastabotv2/internal/util"
 
 	"github.com/bwmarrin/discordgo"
@@ -27,23 +28,8 @@ func Handler(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
 	})
 	parsedArguments := util.ParseArguments([]string{"message"}, interaction.ApplicationCommandData().Options)
 
-	var prompt string
-	switch interaction.ApplicationCommandData().Name {
-	case "caveman":
-		fallthrough
-	case "caveman-vc":
-		prompt = systemCaveman
-	case "respond":
-		fallthrough
-	case "chat":
-		prompt = systemPrompt
-	case "respond-vc":
-		fallthrough
-	case "speak":
-		prompt = systemPromptSpeak
-	}
+	chatRSP, err := GetChatGPTResponse(interaction.ApplicationCommandData().Name, parsedArguments["Message"], interaction.Member.User.ID)
 
-	chatRSP, err := util.GetChatGPTResponse(prompt, parsedArguments["Message"], interaction.Member.User.ID)
 	if err != nil {
 		fmt.Println(fmt.Errorf("error interacting with chatgpt char: %e", err))
 		e := "If you see this, and error likely happened. Whoops"
@@ -91,4 +77,24 @@ func Handler(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
 		fmt.Println(fmt.Errorf("unimplemented command: %s", interaction.ApplicationCommandData().Name))
 	}
 
+}
+
+func GetChatGPTResponse(promptName, message, userID string) (openai.ChatCompletionResponse, error) {
+	var prompt string
+	switch promptName {
+	case "caveman":
+		fallthrough
+	case "caveman-vc":
+		prompt = systemCaveman
+	case "respond":
+		fallthrough
+	case "chat":
+		prompt = systemPrompt
+	case "respond-vc":
+		fallthrough
+	case "speak":
+		prompt = systemPromptSpeak
+	}
+
+	return util.GetChatGPTResponse(prompt, message, userID)
 }

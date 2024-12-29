@@ -4,7 +4,7 @@ go 1.23.0
 
 require github.com/aws/aws-sdk-go-v2/service/sns v1.31.4 // indirect
 
-require github.com/stollenaar/copypastabotv2/internal/util v0.0.0-00010101000000-000000000000
+require github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20241229024158-7c156679fb17
 
 require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.28 // indirect
@@ -40,5 +40,3 @@ require (
 	golang.org/x/net v0.28.0 // indirect
 	golang.org/x/oauth2 v0.22.0 // indirect
 )
-
-replace github.com/stollenaar/copypastabotv2/internal/util => ../../internal/util

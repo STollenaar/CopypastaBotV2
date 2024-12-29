@@ -266,10 +266,10 @@ func (c *Config) GetOpenAIKey() (string, error) {
 	return getAWSParameter(c.OPENAI_KEY)
 }
 
-func (c *Config) SendStatsBotRequest(sqsObject Object) error {
+func (c *Config) SendStatsBotRequest(sqsObject Object) (Object, error) {
 	jsonData, err := json.Marshal(sqsObject)
 	if err != nil {
-		return err
+		return Object{}, err
 	}
 	bodyReader := bytes.NewReader(jsonData)
 
@@ -277,7 +277,7 @@ func (c *Config) SendStatsBotRequest(sqsObject Object) error {
 	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("https://%s/userMessages", c.STATISTICS_BOT), bodyReader)
 
 	if err != nil {
-		return err
+		return Object{}, err
 	}
 	req.Header.Set("Content-Type", "application/json")
 
@@ -289,9 +289,11 @@ func (c *Config) SendStatsBotRequest(sqsObject Object) error {
 
 	res, err := client.Do(req)
 	if err != nil {
-		return err
+		return Object{}, err
 	}
 	body, _ := io.ReadAll(res.Body)
+	var object Object
+	json.Unmarshal(body, &object)
 	fmt.Printf("Response body: %s\n", string(body))
-	return err
+	return object, err
 }

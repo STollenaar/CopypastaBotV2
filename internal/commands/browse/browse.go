@@ -33,21 +33,41 @@ func (b *browserTracker) Unmarshal(data []byte) error {
 }
 
 func Handler(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
-	bot.InteractionRespond(interaction.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: "Loading...",
-		},
-	})
-	parsedArguments := util.ParseArguments([]string{"subReddit"}, interaction.ApplicationCommandData().Options)
+	var parsedArguments util.CommandParsed
+	var browser browserTracker
+	if interaction.Type == discordgo.InteractionType(discordgo.InteractionApplicationCommand) {
+		bot.InteractionRespond(interaction.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "Loading...",
+			},
+		})
+		parsedArguments = util.ParseArguments([]string{"subReddit"}, interaction.ApplicationCommandData().Options)
+		browser = browserTracker{
+			SubReddit: parsedArguments["SubReddit"],
+			Page:      0,
+		}
+	} else {
+		bot.InteractionRespond(interaction.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseDeferredMessageUpdate,
+			Data: &discordgo.InteractionResponseData{
+				Content: "Loading...",
+			},
+		})
+		err := browser.Unmarshal([]byte(interaction.MessageComponentData().CustomID))
+		if err != nil {
+			fmt.Printf("Error unmarshalling browser data: %v\n", err)
+			return
+		}
+	}
 
 	// userID := interaction.Member.User.ID
-	posts := util.DisplayRedditSubreddit(parsedArguments["SubReddit"])
-	embed := util.DisplayRedditPost(posts[0].ID, true)[0]
+	posts := util.DisplayRedditSubreddit(browser.SubReddit)
+	embed := util.DisplayRedditPost(posts[browser.Page].ID, true)[0]
 
 	response := discordgo.WebhookEdit{
 		Embeds:     &[]*discordgo.MessageEmbed{embed},
-		Components: getActionRow(0, parsedArguments["SubReddit"]),
+		Components: getActionRow(browser.Page, browser.SubReddit),
 	}
 
 	bot.InteractionResponseEdit(interaction.Interaction, &response)

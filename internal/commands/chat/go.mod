@@ -4,7 +4,8 @@ go 1.23.4
 
 require (
 	github.com/bwmarrin/discordgo v0.28.1
-	github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20241003212403-edcf95f330b2
+	github.com/sashabaranov/go-openai v1.31.0
+	github.com/stollenaar/copypastabotv2/internal/util v0.0.0-00010101000000-000000000000
 
 )
 
@@ -33,10 +34,11 @@ require (
 	github.com/aws/smithy-go v1.20.4 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
-	github.com/sashabaranov/go-openai v1.31.0 // indirect
 	github.com/vartanbeno/go-reddit/v2 v2.0.1 // indirect
 	golang.org/x/crypto v0.26.0 // indirect
 	golang.org/x/net v0.28.0 // indirect
 	golang.org/x/oauth2 v0.22.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/stollenaar/copypastabotv2/internal/util => ../../util

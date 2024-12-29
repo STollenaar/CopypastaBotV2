@@ -4,7 +4,7 @@ go 1.23.0
 
 require (
 	github.com/bwmarrin/discordgo v0.28.1
-	github.com/stollenaar/copypastabotv2/internal/util v0.0.0-00010101000000-000000000000
+	github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20241229024158-7c156679fb17
 
 )
 
@@ -38,5 +38,3 @@ require (
 	golang.org/x/text v0.17.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace github.com/stollenaar/copypastabotv2/internal/util => ../../internal/util

@@ -71,7 +71,7 @@ func handler() error {
 		}
 		sqsMessageData, _ := json.Marshal(sqsMessage)
 		fmt.Printf("Sending sqsData: %s\n", string(sqsMessageData))
-		err := util.ConfigFile.SendStatsBotRequest(sqsMessage)
+		_,err := util.ConfigFile.SendStatsBotRequest(sqsMessage)
 		if err != nil {
 			return fmt.Errorf("error sending interrupt event to sqs: %v", err)
 		}

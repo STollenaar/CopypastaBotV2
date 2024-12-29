@@ -75,34 +75,6 @@ locals {
         AWS_SNS_TOPIC_ARN = aws_sns_topic.router_sns.arn
       }
     }
-    dunceReceiver = {
-      description       = "Dunce receiver for CopypastaBot"
-      runtime           = "provided.al2"
-      handler           = "bootstrap"
-      timeout           = 60 * 5
-      memory_size       = 128
-      extra_permissions = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json, data.aws_iam_policy_document.sqs_role_policy_document.json]
-      environment_variables = {
-        DISCORD_WEBHOOK_ID        = "1259968040443969586"
-        DISCORD_WEBHOOK_TOKEN     = "V3TE--tKt5kTIlaJd8N59DzbG26pYq7N0BoQYzNNOr00Ed3t8DLgnzKRvpT3PHSwycve"
-        AWS_DISCORD_WEBHOOK_ID    = "/discord/webhook/id"
-        AWS_DISCORD_WEBHOOK_TOKEN = "/discord/webhook/token"
-        OPENAI_KEY                = "/openai/api_key"
-      }
-    }
-    eggReceiver = {
-      description       = "Egg receiver for CopypastaBot"
-      runtime           = "provided.al2"
-      handler           = "bootstrap"
-      timeout           = 60 * 5
-      memory_size       = 128
-      extra_permissions = [data.aws_iam_policy_document.lambda_execution_role_policy_document.json]
-      environment_variables = {
-        AWS_DISCORD_CHANNEL_ID      = "/discord/egg_channel"
-        AWS_PARAMETER_DISCORD_TOKEN = "/discord_tokens/${local.name}"
-        DATE_STRING                 = "2024-07-27"
-      }
-    }
 
     help = {
       description       = "Help command for CopypastaBot"

@@ -9,7 +9,7 @@
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "cwd": "cmd/copypastabotv2/",
+            "cwd": "cmd/copypastabotv2",
             "program": "cmd/copypastabotv2/main.go",
         }
     ]

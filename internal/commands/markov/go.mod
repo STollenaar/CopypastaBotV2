@@ -22,7 +22,7 @@ require (
 )
 
 require (
-	github.com/stollenaar/copypastabotv2/internal/util v0.0.0-00010101000000-000000000000
+	github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20241229024158-7c156679fb17
 	github.com/stollenaar/copypastabotv2/pkg/markov v0.0.0-00010101000000-000000000000
 )
 

@@ -9,21 +9,31 @@ import (
 	"golang.org/x/text/language"
 )
 
-
 func Handler(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
-	bot.InteractionRespond(interaction.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: "Loading...",
-		},
-	})
+	command := "help"
+	if interaction.Type == discordgo.InteractionType(discordgo.InteractionApplicationCommand) {
+		bot.InteractionRespond(interaction.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "Loading...",
+			},
+		})
+	} else {
+		bot.InteractionRespond(interaction.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseDeferredMessageUpdate,
+			Data: &discordgo.InteractionResponseData{
+				Content: "Loading...",
+			},
+		})
+		command = interaction.MessageComponentData().Values[0]
+	}
 	response := discordgo.WebhookEdit{
-		Embeds: getCommandInformation("help"),
+		Embeds: getCommandInformation(command),
 		AllowedMentions: &discordgo.MessageAllowedMentions{
 			Users: []string{},
 			Roles: []string{},
 		},
-		Components: getSelectMenu("help"),
+		Components: getSelectMenu(command),
 	}
 	bot.InteractionResponseEdit(interaction.Interaction, &response)
 }

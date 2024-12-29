@@ -23,12 +23,28 @@ func Handler(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
 	var ok bool
 	var url, user, markovData string
 	if url, ok = parsedArguments["Url"]; ok {
-		markovData = handleURL(url)
+		markovData = HandleURL(url)
 	} else if user, ok = parsedArguments["User"]; ok {
 		user = strings.ReplaceAll(user, "<", "")
 		user = strings.ReplaceAll(user, ">", "")
 		user = strings.ReplaceAll(user, "@", "")
-		markovData = handleUser(user)
+
+		sqsMessage := util.Object{
+			GuildID:       interaction.GuildID,
+			ApplicationID: interaction.AppID,
+			Command:       "markov",
+			Type:          "user",
+			Data:          user,
+			ChannelID:     interaction.ChannelID,
+			Token:         interaction.Token,
+		}
+
+		resp, err := util.ConfigFile.SendStatsBotRequest(sqsMessage)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		markovData = HandleUser(resp.Data)
 	}
 	fmt.Println(url, user)
 	response := discordgo.WebhookEdit{
@@ -38,60 +54,7 @@ func Handler(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
 	bot.InteractionResponseEdit(interaction.Interaction, &response)
 }
 
-// func handler(snsEvent events.SNSEvent) error {
-// 	var req events.APIGatewayProxyRequest
-// 	var interaction discordgo.Interaction
-// 	var response discordgo.WebhookEdit
-
-// 	err := json.Unmarshal([]byte(snsEvent.Records[0].SNS.Message), &req)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	err = json.Unmarshal([]byte(req.Body), &interaction)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	sqsMessage := util.Object{
-// 		Token:         interaction.Token,
-// 		Command:       "markov",
-// 		GuildID:       interaction.GuildID,
-// 		ApplicationID: interaction.AppID,
-// 	}
-
-// 	parsedArguments := util.ParseArguments([]string{"url", "user"}, interaction.ApplicationCommandData().Options)
-
-// 	if url, ok := parsedArguments["Url"]; ok {
-// 		sqsMessage.Type = "url"
-// 		sqsMessage.Data = url
-
-// 		sqsMessageData, _ := json.Marshal(sqsMessage)
-// 		err := util.PublishObject("sqsReceiver", string(sqsMessageData))
-// 		if err != nil {
-// 			fmt.Printf("Encountered an error while processing the markov command: %v\n", err)
-// 			return err
-// 		}
-// 	} else if user, ok := parsedArguments["User"]; ok {
-// 		user = strings.ReplaceAll(user, "<", "")
-// 		user = strings.ReplaceAll(user, ">", "")
-// 		user = strings.ReplaceAll(user, "@", "")
-// 		sqsMessage.Type = "user"
-// 		sqsMessage.Data = user
-
-// 		err := util.ConfigFile.SendStatsBotRequest(sqsMessage)
-// 		if err != nil {
-// 			fmt.Println(err)
-// 			return err
-// 		}
-// 	}
-
-// 	data, _ := json.Marshal(response)
-// 	fmt.Printf("Responding with %s\n", string(data))
-// 	_, err = util.SendRequest("PATCH", interaction.AppID, interaction.Token, util.WEBHOOK, data)
-
-//		return err
-//	}
-func handleURL(input string) string {
+func HandleURL(input string) string {
 	data, err := pkgMarkov.GetMarkovURL(input)
 	if err != nil {
 		fmt.Println(err)
@@ -100,7 +63,7 @@ func handleURL(input string) string {
 	return data
 }
 
-func handleUser(input string) string {
+func HandleUser(input string) string {
 	data, err := pkgMarkov.GetUserMarkov(input)
 	if err != nil {
 		fmt.Println(err)

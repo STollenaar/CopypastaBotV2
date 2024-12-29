@@ -25,13 +25,17 @@ var (
 	RemoveCommands = flag.Bool("rmcmd", true, "Remove all commands after shutdowning or not")
 
 	commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
-		"browse": browse.Handler,
-		"chat":   chat.Handler,
-		"help":   help.Handler,
-		"markov": markov.Handler,
-		"pasta":  pasta.Handler,
-		"ping":   PingCommand,
-		"speak":  speak.Handler,
+		"browse":     browse.Handler,
+		"chat":       chat.Handler,
+		"caveman":    chat.Handler,
+		"respond":    chat.Handler,
+		"caveman-vc": chat.Handler,
+		"respond-vc": chat.Handler,
+		"help":       help.Handler,
+		"markov":     markov.Handler,
+		"pasta":      pasta.Handler,
+		"ping":       PingCommand,
+		"speak":      speak.Handler,
 	}
 )
 
@@ -45,14 +49,21 @@ func init() {
 	bot, _ = discordgo.New("Bot " + token)
 
 	bot.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-		if h, ok := commandHandlers[i.ApplicationCommandData().Name]; ok {
-			h(s, i)
+		switch i.Type {
+		case discordgo.InteractionMessageComponent:
+			if h, ok := commandHandlers[i.Interaction.Message.Interaction.Name]; ok {
+				h(s, i)
+			}
+		default:
+			if h, ok := commandHandlers[i.ApplicationCommandData().Name]; ok {
+				h(s, i)
+			}
 		}
 	})
 }
 
 func main() {
-	bot.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsGuildMessages | discordgo.IntentsGuildMembers)
+	bot.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsGuildMessages | discordgo.IntentsGuildMembers | discordgo.IntentGuildVoiceStates)
 
 	err := bot.Open()
 	if err != nil {
@@ -68,6 +79,9 @@ func main() {
 		}
 		registeredCommands[i] = cmd
 	}
+
+	log.Println("Bot up and running")
+	defer bot.Close()
 
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
