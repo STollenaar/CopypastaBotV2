@@ -11,6 +11,4 @@ use (
 	./internal/commands/speakInterrupt
 	./internal/util
 	./pkg/markov
-	./tools/describe
-	./tools/register
 )

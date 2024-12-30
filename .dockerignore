@@ -1,0 +1,9 @@
+Dockerfile
+Makefile
+README.md
+.vscode/
+dist/
+**/*.env
+.gitignore
+terraform/
+tools/

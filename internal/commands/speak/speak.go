@@ -8,7 +8,6 @@ import (
 	"log"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/jonas747/dca"
@@ -108,7 +107,7 @@ func Handler(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
 }
 
 // Command create a tts experience for the generated markov
-func synthData(object util.Object, userID string, bot *discordgo.Session) error {
+func synthData(object util.Object, userID string, bot *discordgo.Session) {
 
 	if object.Type == "redditpost" {
 		post := util.GetRedditPost(object.Data)
@@ -124,9 +123,9 @@ func synthData(object util.Object, userID string, bot *discordgo.Session) error 
 			fmt.Println(err)
 		} else {
 			content = resp.Choices[0].Message.Content
-			if !strings.Contains(content, "<speak>") {
-				content = "<speak>" + content + "</speak>"
-			}
+			// if !strings.Contains(content, "<speak>") {
+			// 	content = "<speak>" + content + "</speak>"
+			// }
 			textType = types.TextTypeSsml
 			engine = types.EngineStandard
 		}
@@ -153,17 +152,17 @@ func synthData(object util.Object, userID string, bot *discordgo.Session) error 
 	if stream != nil {
 		if finished, _ := stream.Finished(); !finished {
 			fmt.Println("stream is not finished and not null")
-			return nil
+			return
 		}
 	}
 
-	return doSpeech(bot)
+	doSpeech(bot)
 }
 
-func doSpeech(bot *discordgo.Session) error {
+func doSpeech(bot *discordgo.Session) {
 	if len(queue) == 0 {
 		fmt.Println("Queue is empty")
-		return nil
+		return
 	}
 	currentSpeech := queue[0]
 	queue = queue[1:]
@@ -179,7 +178,13 @@ func doSpeech(bot *discordgo.Session) error {
 	}
 	vs, err := bot.State.VoiceState(currentSpeech.sqsObject.GuildID, currentSpeech.userID)
 	if err != nil {
-		return fmt.Errorf("error finding voice state: %v", err)
+		fmt.Println(fmt.Errorf("error finding voice state: %v", err))
+		if len(queue) > 0 {
+			doSpeech(bot)
+		} else {
+			guildVC[currentSpeech.sqsObject.GuildID] = nil
+		}
+		return
 	}
 
 	// Sleep for a specified amount of time before playing the sound
@@ -196,36 +201,35 @@ func doSpeech(bot *discordgo.Session) error {
 	}
 
 	if err != nil {
-		return fmt.Errorf("error joining voice channel: %v", err)
+		fmt.Println(fmt.Errorf("error joining voice channel: %v", err))
 	}
 	guildVC[currentSpeech.sqsObject.GuildID] = vc
 	err = vc.Speaking(true)
 	if err != nil {
-		return fmt.Errorf("error setting speaking to true: %v", err)
+		fmt.Println(fmt.Errorf("error setting speaking to true: %v", err))
 	}
 	// write the whole body at once
 	outFile, err := os.Create("/tmp/tmp.mp3")
 	if err != nil {
-		return fmt.Errorf("error creating tmp mp3 file: %v", err)
+		fmt.Println(fmt.Errorf("error creating tmp mp3 file: %v", err))
 	}
 	defer outFile.Close()
 	// handle err
 	_, err = io.Copy(outFile, stream)
 	if err != nil {
-		return fmt.Errorf("error copying stream to tmp file: %v", err)
+		fmt.Println(fmt.Errorf("error copying stream to tmp file: %v", err))
 	}
 	// Encoding a file and saving it to disk
 	encodeSession, err := dca.EncodeFile("/tmp/tmp.mp3", dca.StdEncodeOptions)
 	if err != nil {
-		return fmt.Errorf("error dca encoding file: %v", err)
+		fmt.Println(fmt.Errorf("error dca encoding file: %v", err))
 	}
 
 	done := make(chan error)
 	dca.NewStream(encodeSession, vc, done)
 	err = <-done
 	if err != nil && err != io.EOF {
-		fmt.Println(err)
-		return fmt.Errorf("stream error: %v", err)
+		fmt.Println(fmt.Errorf("stream error: %v", err))
 	}
 
 	// Make sure everything is cleaned up, that for example the encoding process if any issues happened isnt lingering around
@@ -239,9 +243,9 @@ func doSpeech(bot *discordgo.Session) error {
 	time.Sleep(250 * time.Millisecond)
 
 	if len(queue) > 0 {
-		return doSpeech(bot)
+		doSpeech(bot)
 	} else {
 		guildVC[currentSpeech.sqsObject.GuildID] = nil
 	}
-	return nil
+	return
 }

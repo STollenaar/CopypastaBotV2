@@ -1,5 +1,5 @@
 locals {
-  name            = "copypastabot"
+  name            = "copypastabotv2"
   kubeconfig_file = "/home/stollenaar/.kube/config"
 
   # Automatically load provider variables
@@ -102,6 +102,6 @@ terraform {
     commands = get_terraform_commands_that_need_vars()
     arguments = [
       "-var=kubeconfig_file=${local.kubeconfig_file}"
-    ]y
+    ]
   }
 }

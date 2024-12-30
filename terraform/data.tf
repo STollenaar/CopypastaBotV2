@@ -16,6 +16,15 @@ data "terraform_remote_state" "discord_bots_cluster" {
   }
 }
 
+data "terraform_remote_state" "vault_setup" {
+  backend = "s3"
+  config = {
+    region = "ca-central-1"
+    bucket = "stollenaar-terraform-states"
+    key    = "infrastructure/vault-setup/terraform.tfstate"
+  }
+}
+
 data "aws_region" "current" {}
 
 data "aws_caller_identity" "current" {}
@@ -70,5 +79,15 @@ data "aws_iam_policy_document" "ssm_access_role_policy_document" {
       "ssm:DescribeParameters",
     ]
     resources = ["*"]
+  }
+  statement {
+    sid    = "PollySynthSpeech"
+    effect = "Allow"
+    actions = [
+      "polly:SynthesizeSpeech",
+    ]
+    resources = [
+      "*"
+    ]
   }
 }

@@ -1,3 +1,18 @@
+locals {
+  name = "copypastabotv2"
+  #   used_profile = data.awsprofiler_list.list_profiles.profiles[try(index(data.awsprofiler_list.list_profiles.profiles.*.name, "personal"), 0)]
+
+  environment_variables = {
+    AWS_PARAMETER_DISCORD_TOKEN        = "/discord_tokens/${local.name}"
+    AWS_PARAMETER_REDDIT_USERNAME      = "/reddit/username"
+    AWS_PARAMETER_REDDIT_PASSWORD      = "/reddit/password"
+    AWS_PARAMETER_REDDIT_CLIENT_ID     = "/reddit/client_id"
+    AWS_PARAMETER_REDDIT_CLIENT_SECRET = "/reddit/client_secret"
+    OPENAI_KEY                         = "/openai/api_key"
+    STATSBOT_URL                       = "statisticsbot.statisticsbot.svc.cluster.local"
+  }
+}
+
 resource "kubernetes_namespace" "copypastabot" {
   metadata {
     name = local.name
@@ -7,7 +22,7 @@ resource "kubernetes_namespace" "copypastabot" {
 
 resource "kubernetes_deployment" "copypastabot" {
   metadata {
-    name      = "copypastabot"
+    name      = "copypastabotv2"
     namespace = kubernetes_namespace.copypastabot.metadata.0.name
     labels = {
       app = local.name
@@ -36,7 +51,7 @@ resource "kubernetes_deployment" "copypastabot" {
           name = kubernetes_manifest.external_secret.manifest.spec.target.name
         }
         container {
-          image = "${data.terraform_remote_state.discord_bots_cluster.outputs.discord_bots_repo.repository_url}:${local.name}-1.1.16-SNAPSHOT-26e1c53-amd64"
+          image = "${data.terraform_remote_state.discord_bots_cluster.outputs.discord_bots_repo.repository_url}:${local.name}-0.0.8-SNAPSHOT-7a49c2a"
           name  = local.name
           env {
             name  = "AWS_REGION"
@@ -58,42 +73,3 @@ resource "kubernetes_deployment" "copypastabot" {
     }
   }
 }
-
-
-locals {
-  name = "copypastabot"
-  #   used_profile = data.awsprofiler_list.list_profiles.profiles[try(index(data.awsprofiler_list.list_profiles.profiles.*.name, "personal"), 0)]
-
-  environment_variables = {
-    AWS_PARAMETER_DISCORD_TOKEN        = "/discord_tokens/${local.name}"
-    AWS_PARAMETER_REDDIT_USERNAME      = "/reddit/username"
-    AWS_PARAMETER_REDDIT_PASSWORD      = "/reddit/password"
-    AWS_PARAMETER_REDDIT_CLIENT_ID     = "/reddit/client_id"
-    AWS_PARAMETER_REDDIT_CLIENT_SECRET = "/reddit/client_secret"
-    OPENAI_KEY                         = "/openai/api_key"
-    STATSBOT_URL                       = "statisticsbot-statisticsbot-ingress.tail88c07.ts.net"
-  }
-}
-
-# module "lambda_functions" {
-#   source    = "./templates/lambda"
-#   functions = local.functions
-#   project   = local.name
-# }
-
-# resource "aws_scheduler_schedule" "example" {
-#   name       = "speak-interrupt"
-#   group_name = "default"
-
-#   flexible_time_window {
-#     mode = "OFF"
-#   }
-
-#   schedule_expression = "cron(0 * ? * * *)"
-
-#   target {
-#     arn      = module.lambda_functions.lambda_functions["speakInterrupt"].arn
-#     role_arn = aws_iam_role.scheduler.arn
-#   }
-# }
-

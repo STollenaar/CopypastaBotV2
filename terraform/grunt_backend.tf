@@ -3,7 +3,7 @@ terraform {
   backend "s3" {
     bucket  = "stollenaar-terraform-states"
     encrypt = true
-    key     = "discordbots/copypastabot/terraform.tfstate"
+    key     = "discordbots/copypastabotv2/terraform.tfstate"
     region  = "ca-central-1"
   }
 }
