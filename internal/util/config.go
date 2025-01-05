@@ -11,13 +11,13 @@ import (
 	"net/http"
 	"os"
 	"runtime/debug"
-	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/joho/godotenv"
+	"github.com/stollenaar/aws-rotating-credentials-provider/credentials/filecreds"
 )
 
 type Webhook struct {
@@ -48,9 +48,7 @@ type Config struct {
 	AWS_PARAMETER_REDDIT_PASSWORD      string
 	AWS_PARAMETER_REDDIT_CLIENT_ID     string
 	AWS_PARAMETER_REDDIT_CLIENT_SECRET string
-	AWS_SNS_TOPIC_ARN                  string
-	AWS_SQS_URL                        string
-	AWS_SQS_URL_OTHER                  []string
+	AWS_PARAMETER_OPENAI_KEY           string
 
 	TERMINAL_REGEX string
 	STATISTICS_BOT string
@@ -102,9 +100,6 @@ func init() {
 		DISCORD_WEBHOOK_ID:                 os.Getenv("DISCORD_WEBHOOK_ID"),
 		DISCORD_WEBHOOK_TOKEN:              os.Getenv("DISCORD_WEBHOOK_TOKEN"),
 		AWS_REGION:                         os.Getenv("AWS_REGION"),
-		AWS_SNS_TOPIC_ARN:                  os.Getenv("AWS_SNS_TOPIC_ARN"),
-		AWS_SQS_URL:                        os.Getenv("AWS_SQS_URL"),
-		AWS_SQS_URL_OTHER:                  strings.Split(os.Getenv("AWS_SQS_URL_OTHER"), ";"),
 		AWS_PARAMETER_DISCORD_TOKEN:        os.Getenv("AWS_PARAMETER_DISCORD_TOKEN"),
 		AWS_DISCORD_CHANNEL_ID:             os.Getenv("AWS_DISCORD_CHANNEL_ID"),
 		AWS_DISCORD_WEBHOOK_ID:             os.Getenv("AWS_DISCORD_WEBHOOK_ID"),
@@ -114,6 +109,7 @@ func init() {
 		AWS_PARAMETER_REDDIT_PASSWORD:      os.Getenv("AWS_PARAMETER_REDDIT_PASSWORD"),
 		AWS_PARAMETER_REDDIT_CLIENT_ID:     os.Getenv("AWS_PARAMETER_REDDIT_CLIENT_ID"),
 		AWS_PARAMETER_REDDIT_CLIENT_SECRET: os.Getenv("AWS_PARAMETER_REDDIT_CLIENT_SECRET"),
+		AWS_PARAMETER_OPENAI_KEY:           os.Getenv("AWS_PARAMETER_OPENAI_KEY"),
 		REDDIT_USERNAME:                    os.Getenv("REDDIT_USERNAME"),
 		REDDIT_PASSWORD:                    os.Getenv("REDDIT_PASSWORD"),
 		REDDIT_CLIENT_ID:                   os.Getenv("REDDIT_CLIENT_ID"),
@@ -130,16 +126,35 @@ func init() {
 
 }
 
+
 func init() {
 
-	// Create a config with the credentials provider.
-	cfg, err := config.LoadDefaultConfig(context.TODO())
+	if os.Getenv("AWS_SHARED_CREDENTIALS_FILE") != "" {
+		provider := filecreds.NewFilecredentialsProvider(os.Getenv("AWS_SHARED_CREDENTIALS_FILE"))
+		ssmClient = ssm.New(ssm.Options{
+			Credentials: provider,
+			Region:      ConfigFile.AWS_REGION,
+		})
+	} else {
 
-	if err != nil {
-		log.Fatal("Error loading AWS config:", err)
+		// Create a config with the credentials provider.
+		cfg, err := config.LoadDefaultConfig(context.TODO(),
+			config.WithRegion(ConfigFile.AWS_REGION),
+		)
+
+		if err != nil {
+			if _, isProfileNotExistError := err.(config.SharedConfigProfileNotExistError); isProfileNotExistError {
+				cfg, err = config.LoadDefaultConfig(context.TODO(),
+					config.WithRegion(ConfigFile.AWS_REGION),
+				)
+			}
+			if err != nil {
+				log.Fatal("Error loading AWS config:", err)
+			}
+		}
+
+		ssmClient = ssm.NewFromConfig(cfg)
 	}
-
-	ssmClient = ssm.NewFromConfig(cfg)
 }
 
 func (c *Config) GetDiscordToken() (string, error) {
@@ -260,10 +275,13 @@ func getAWSParameter(parameterName string) (string, error) {
 }
 
 func (c *Config) GetOpenAIKey() (string, error) {
-	if c.OPENAI_KEY == "" {
+	if c.OPENAI_KEY == "" && c.AWS_PARAMETER_OPENAI_KEY == "" {
 		return "", fmt.Errorf("OPENAI_KEY is not defined")
 	}
-	return getAWSParameter(c.OPENAI_KEY)
+	if c.OPENAI_KEY != "" {
+		return c.OPENAI_KEY, nil
+	}
+	return getAWSParameter(c.AWS_PARAMETER_OPENAI_KEY)
 }
 
 func (c *Config) SendStatsBotRequest(sqsObject Object) (Object, error) {

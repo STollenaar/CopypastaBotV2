@@ -4,7 +4,7 @@ go 1.23.0
 
 require github.com/aws/aws-sdk-go-v2/service/sns v1.33.8 // indirect
 
-require github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20241230025036-7d9f4114e28a
+require github.com/stollenaar/copypastabotv2/internal/util v0.0.0-20241231222915-4a1ec13e8501
 
 require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.48 // indirect
@@ -20,7 +20,7 @@ require (
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/sashabaranov/go-openai v1.36.1 // indirect
-	golang.org/x/sys v0.28.0 // indirect
+	golang.org/x/sys v0.29.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
@@ -38,5 +38,5 @@ require (
 	github.com/vartanbeno/go-reddit/v2 v2.0.1 // indirect
 	golang.org/x/crypto v0.31.0 // indirect
 	golang.org/x/net v0.33.0 // indirect
-	golang.org/x/oauth2 v0.24.0 // indirect
+	golang.org/x/oauth2 v0.25.0 // indirect
 )

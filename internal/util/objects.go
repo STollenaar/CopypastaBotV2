@@ -8,10 +8,8 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
-	"github.com/aws/aws-sdk-go-v2/service/sns/types"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -71,20 +69,4 @@ func GetMessageObject(object Object) (discordgo.Message, error) {
 		return discordgo.Message{}, fmt.Errorf("error parsing into interaction with data: %s, and error: %v", bodyString, err)
 	}
 	return message, nil
-}
-
-func PublishObject(destination, data string) error {
-	// Routing the commands to the correctly lambda that will handle it
-	messageAttributes := make(map[string]types.MessageAttributeValue)
-	messageAttributes["function_name"] = types.MessageAttributeValue{
-		DataType:    aws.String("String"),
-		StringValue: aws.String(destination),
-	}
-
-	_, err := snsClient.Publish(context.TODO(), &sns.PublishInput{
-		TopicArn:          &ConfigFile.AWS_SNS_TOPIC_ARN,
-		Message:           aws.String(string(data)),
-		MessageAttributes: messageAttributes,
-	})
-	return err
 }

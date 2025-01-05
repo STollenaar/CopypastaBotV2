@@ -8,7 +8,7 @@ locals {
     AWS_PARAMETER_REDDIT_PASSWORD      = "/reddit/password"
     AWS_PARAMETER_REDDIT_CLIENT_ID     = "/reddit/client_id"
     AWS_PARAMETER_REDDIT_CLIENT_SECRET = "/reddit/client_secret"
-    OPENAI_KEY                         = "/openai/api_key"
+    AWS_PARAMETER_OPENAI_KEY           = "/openai/api_key"
     STATSBOT_URL                       = "statisticsbot.statisticsbot.svc.cluster.local"
   }
 }
@@ -51,7 +51,7 @@ resource "kubernetes_deployment" "copypastabot" {
           name = kubernetes_manifest.external_secret.manifest.spec.target.name
         }
         container {
-          image = "${data.terraform_remote_state.discord_bots_cluster.outputs.discord_bots_repo.repository_url}:${local.name}-0.0.8-SNAPSHOT-7a49c2a"
+          image = "${data.terraform_remote_state.discord_bots_cluster.outputs.discord_bots_repo.repository_url}:${local.name}-0.0.9-SNAPSHOT-9d213bc"
           name  = local.name
           env {
             name  = "AWS_REGION"
