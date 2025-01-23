@@ -26,6 +26,9 @@ func Handler(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
 			Content: "Loading...",
 		},
 	})
+	if interaction.Data.(discordgo.ApplicationCommandInteractionData).Resolved != nil {
+		extractMessageData("message", interaction.Interaction)
+	}
 	parsedArguments := util.ParseArguments([]string{"message"}, interaction.ApplicationCommandData().Options)
 
 	chatRSP, err := GetChatGPTResponse(interaction.ApplicationCommandData().Name, parsedArguments["Message"], interaction.Member.User.ID)
@@ -97,4 +100,15 @@ func GetChatGPTResponse(promptName, message, userID string) (openai.ChatCompleti
 	}
 
 	return util.GetChatGPTResponse(prompt, message, userID)
+}
+
+func extractMessageData(optionName string, interaction *discordgo.Interaction) {
+	messageData := interaction.Data.(discordgo.ApplicationCommandInteractionData).Resolved.Messages[interaction.Data.(discordgo.ApplicationCommandInteractionData).TargetID].Content
+	appData := interaction.ApplicationCommandData()
+	appData.Options = append(appData.Options, &discordgo.ApplicationCommandInteractionDataOption{
+		Name:  optionName,
+		Type:  3,
+		Value: messageData,
+	})
+	interaction.Data = appData
 }
