@@ -16,6 +16,6 @@
 # vendor/
 .env
 dist
-terraform/.terraform/*
+terraform/**/.terraform/
 **/bootstrap
 **/main

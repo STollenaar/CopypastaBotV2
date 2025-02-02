@@ -39,7 +39,7 @@ resource "kubernetes_deployment" "copypastabot" {
         annotations = {
           "vault.hashicorp.com/agent-inject" = "true"
           "vault.hashicorp.com/role"         = "internal-app"
-          "vault.hashicorp.com/aws-role"     = aws_iam_role.copypastabot_role.name
+          "vault.hashicorp.com/aws-role"     = data.terraform_remote_state.iam_role.outputs.iam.copypastabot_role.name
           "cache.spicedelver.me/cmtemplate"  = "vault-aws-agent"
         }
         labels = {

@@ -3,7 +3,7 @@ locals {
   kubeconfig_file = "/home/stollenaar/.kube/config"
 
   # Automatically load provider variables
-  provider_vars = read_terragrunt_config("./provider.hcl")
+  provider_vars = read_terragrunt_config("${get_original_terragrunt_dir()}/provider.hcl")
 
   # Extract the variables we need for easy access
   providers = local.provider_vars.locals.providers
@@ -18,7 +18,7 @@ remote_state {
   config = {
     bucket = "stollenaar-terraform-states"
 
-    key     = "discordbots/${local.name}/terraform.tfstate"
+    key     = "discordbots/${local.name}/${path_relative_to_include()}/terraform.tfstate"
     region  = "ca-central-1"
     encrypt = true
   }
@@ -84,24 +84,4 @@ generate "versions" {
         required_version = ">= 1.2.2"
     }
     EOF
-}
-
-terraform {
-  before_hook "before_hook" {
-    commands = ["apply", "destroy", "plan"]
-    execute  = ["./conf/start_service.sh", local.kubeconfig_file]
-    # get_env("KUBES_ENDPOINT", "somedefaulturl") you can get env vars or pass in params as needed to the script
-  }
-
-  after_hook "after_hook" {
-    commands     = ["apply", "destroy", "plan"]
-    execute      = ["./conf/stop_service.sh"]
-    run_on_error = true
-  }
-  extra_arguments "common_vars" {
-    commands = get_terraform_commands_that_need_vars()
-    arguments = [
-      "-var=kubeconfig_file=${local.kubeconfig_file}"
-    ]
-  }
 }

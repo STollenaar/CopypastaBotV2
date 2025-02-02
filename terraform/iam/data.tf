@@ -7,42 +7,6 @@ data "terraform_remote_state" "kubernetes_cluster" {
   }
 }
 
-data "terraform_remote_state" "discord_bots_cluster" {
-  backend = "s3"
-  config = {
-    region = "ca-central-1"
-    bucket = "stollenaar-terraform-states"
-    key    = "infrastructure/terraform.tfstate"
-  }
-}
-
-data "terraform_remote_state" "vault_setup" {
-  backend = "s3"
-  config = {
-    region = "ca-central-1"
-    bucket = "stollenaar-terraform-states"
-    key    = "infrastructure/vault-setup/terraform.tfstate"
-  }
-}
-
-data "aws_region" "current" {}
-
-data "aws_caller_identity" "current" {}
-
-data "aws_ssm_parameter" "vault_client_id" {
-  name = "/vault/serviceprincipals/talos/client_id"
-}
-
-data "aws_ssm_parameter" "vault_client_secret" {
-  name = "/vault/serviceprincipals/talos/client_secret"
-}
-
-data "hcp_vault_secrets_secret" "vault_root" {
-  app_name    = "proxmox"
-  secret_name = "root"
-}
-
-
 data "aws_iam_policy_document" "assume_policy_document" {
   statement {
     effect = "Allow"
