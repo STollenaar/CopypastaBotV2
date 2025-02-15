@@ -41,6 +41,10 @@
         "type": 3
     },
     {
+        "name": "bayman",
+        "type": 3
+    },
+    {
         "name": "help",
         "description": "Gain information about the bot"
     },

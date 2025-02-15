@@ -17,9 +17,10 @@ var (
 	systemPromptSpeak string
 	//go:embed cavemanRole.txt
 	systemCaveman string
-    //go:embed insultRole.txt
-    systemInsult string
-    
+	//go:embed insultRole.txt
+	systemInsult string
+	//go:embed baymanRole.txt
+	systemBayman string
 )
 
 func Handler(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
@@ -48,13 +49,15 @@ func Handler(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
 	}
 
 	switch interaction.ApplicationCommandData().Name {
+	case "bayman":
+		fallthrough
 	case "respond":
 		fallthrough
 	case "caveman":
 		fallthrough
 	case "chat":
-        fallthrough
-    case "insult":
+		fallthrough
+	case "insult":
 		// Getting around the 4096 word limit
 		contents := util.BreakContent(chatRSP.Choices[0].Message.Content, 4096)
 		var embeds []*discordgo.MessageEmbed
@@ -90,8 +93,10 @@ func Handler(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
 func GetChatGPTResponse(promptName, message, userID string) (openai.ChatCompletionResponse, error) {
 	var prompt string
 	switch promptName {
-    case "insult":
-        prompt = systemInsult
+	case "bayman":
+		promptName = systemBayman
+	case "insult":
+		prompt = systemInsult
 	case "caveman":
 		fallthrough
 	case "caveman-vc":

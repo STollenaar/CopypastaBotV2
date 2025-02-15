@@ -28,6 +28,7 @@ var (
 		"browse":     browse.Handler,
 		"chat":       chat.Handler,
 		"caveman":    chat.Handler,
+		"bayman":     chat.Handler,
 		"insult":     chat.Handler,
 		"respond":    chat.Handler,
 		"caveman-vc": chat.Handler,
