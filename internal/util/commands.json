@@ -4,7 +4,7 @@
         "description": "Browse reddit from the comfort of discord",
         "options": [
             {
-                "name": "name",
+                "name": "subreddit",
                 "type": 3,
                 "description": "name of the subreddit",
                 "required": false

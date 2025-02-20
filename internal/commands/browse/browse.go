@@ -11,6 +11,7 @@ import (
 )
 
 type browserTracker struct {
+	UserId    string `json:"userId"`
 	SubReddit string `json:"subReddit"`
 	Page      int    `json:"page"`
 	Action    string `json:"action"`
@@ -42,10 +43,11 @@ func Handler(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
 				Content: "Loading...",
 			},
 		})
-		parsedArguments = util.ParseArguments([]string{"subReddit"}, interaction.ApplicationCommandData().Options)
+		parsedArguments = util.ParseArguments([]string{"subreddit"}, interaction.ApplicationCommandData().Options)
 		browser = browserTracker{
 			SubReddit: parsedArguments["SubReddit"],
 			Page:      0,
+			UserId:    interaction.Member.User.ID,
 		}
 	} else {
 		bot.InteractionRespond(interaction.Interaction, &discordgo.InteractionResponse{
@@ -61,16 +63,18 @@ func Handler(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
 		}
 	}
 
-	// userID := interaction.Member.User.ID
-	posts := util.DisplayRedditSubreddit(browser.SubReddit)
-	embed := util.DisplayRedditPost(posts[browser.Page].ID, true)[0]
+	userID := interaction.Member.User.ID
+	if userID == browser.UserId {
+		posts := util.DisplayRedditSubreddit(browser.SubReddit)
+		embed := util.DisplayRedditPost(posts[browser.Page].ID, true)[0]
 
-	response := discordgo.WebhookEdit{
-		Embeds:     &[]*discordgo.MessageEmbed{embed},
-		Components: getActionRow(browser.Page, browser.SubReddit),
+		response := discordgo.WebhookEdit{
+			Embeds:     &[]*discordgo.MessageEmbed{embed},
+			Components: getActionRow(browser.Page, browser.SubReddit),
+		}
+
+		bot.InteractionResponseEdit(interaction.Interaction, &response)
 	}
-
-	bot.InteractionResponseEdit(interaction.Interaction, &response)
 }
 
 // func lambdaHandler(snsEvent events.SNSEvent) error {
