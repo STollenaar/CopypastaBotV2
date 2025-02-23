@@ -22,7 +22,7 @@ var (
 	bot *discordgo.Session
 
 	GuildID        = flag.String("guild", "", "Test guild ID. If not passed - bot registers commands globally")
-	RemoveCommands = flag.Bool("rmcmd", true, "Remove all commands after shutdowning or not")
+	RemoveCommands = flag.Bool("rmcmd", false, "Remove all commands after shutdowning or not")
 
 	commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
 		"browse":     browse.Handler,
@@ -74,7 +74,15 @@ func main() {
 
 	log.Println("Adding commands...")
 	registeredCommands := make([]*discordgo.ApplicationCommand, len(util.Commands))
+	commands, err := bot.ApplicationCommands(bot.State.User.ID, *GuildID)
+	if err != nil {
+		log.Printf("Error fetching registered commands: %e", err)
+	}
 	for i, v := range util.Commands {
+		if cmd := containsCommand(v, commands); cmd != nil && optionsEqual(v, cmd) {
+			registeredCommands[i] = cmd
+			continue
+		}
 		cmd, err := bot.ApplicationCommandCreate(bot.State.User.ID, *GuildID, v)
 		if err != nil {
 			log.Panicf("Cannot create '%v' command: %v", v.Name, err)
@@ -117,4 +125,58 @@ func PingCommand(bot *discordgo.Session, interaction *discordgo.InteractionCreat
 			Content: "Pong",
 		},
 	})
+}
+
+func containsCommand(cmd *discordgo.ApplicationCommand, commands []*discordgo.ApplicationCommand) *discordgo.ApplicationCommand {
+	for _, c := range commands {
+		if cmd.Name == c.Name {
+			return c
+		}
+	}
+	return nil
+}
+
+// optionsEqual compares the Options slices of two ApplicationCommands.
+func optionsEqual(cmd, registered *discordgo.ApplicationCommand) bool {
+    if len(cmd.Options) != len(registered.Options) {
+        return false
+    }
+    for i := range cmd.Options {
+        if !optionEqual(cmd.Options[i], registered.Options[i]) {
+            return false
+        }
+    }
+    return true
+}
+
+// optionEqual compares two ApplicationCommandOption objects recursively.
+func optionEqual(a, b *discordgo.ApplicationCommandOption) bool {
+    if a.Name != b.Name ||
+        a.Description != b.Description ||
+        a.Type != b.Type ||
+        a.Required != b.Required {
+        return false
+    }
+
+    // Compare choices if available.
+    if len(a.Choices) != len(b.Choices) {
+        return false
+    }
+    for i := range a.Choices {
+        if a.Choices[i].Name != b.Choices[i].Name ||
+            a.Choices[i].Value != b.Choices[i].Value {
+            return false
+        }
+    }
+
+    // Compare sub-options recursively.
+    if len(a.Options) != len(b.Options) {
+        return false
+    }
+    for i := range a.Options {
+        if !optionEqual(a.Options[i], b.Options[i]) {
+            return false
+        }
+    }
+    return true
 }

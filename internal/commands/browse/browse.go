@@ -11,24 +11,26 @@ import (
 )
 
 type browserTracker struct {
+	UserId    string `json:"userId"`
 	SubReddit string `json:"subReddit"`
 	Page      int    `json:"page"`
 	Action    string `json:"action"`
 }
 
 func (b *browserTracker) Marshal() string {
-	return fmt.Sprintf("%s|%d|%s", b.SubReddit, b.Page, b.Action)
+	return fmt.Sprintf("%s|%d|%s|%s", b.SubReddit, b.Page, b.Action, b.UserId)
 }
 
 func (b *browserTracker) Unmarshal(data []byte) error {
 	d := strings.Split(string(data), "|")
-	if len(d) != 3 {
+	if len(d) != 4 {
 		return errors.New("unknown data format")
 	}
 	page, _ := strconv.Atoi(d[1])
 	b.SubReddit = d[0]
 	b.Page = page
 	b.Action = d[2]
+	b.UserId = d[3]
 	return nil
 }
 
@@ -42,10 +44,11 @@ func Handler(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
 				Content: "Loading...",
 			},
 		})
-		parsedArguments = util.ParseArguments([]string{"subReddit"}, interaction.ApplicationCommandData().Options)
+		parsedArguments = util.ParseArguments([]string{"subreddit"}, interaction.ApplicationCommandData().Options)
 		browser = browserTracker{
-			SubReddit: parsedArguments["SubReddit"],
+			SubReddit: parsedArguments["Subreddit"],
 			Page:      0,
+			UserId:    interaction.Member.User.ID,
 		}
 	} else {
 		bot.InteractionRespond(interaction.Interaction, &discordgo.InteractionResponse{
@@ -54,23 +57,25 @@ func Handler(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
 				Content: "Loading...",
 			},
 		})
-		err := browser.Unmarshal([]byte(interaction.MessageComponentData().CustomID))
+		err := browser.Unmarshal([]byte(interaction.Interaction.MessageComponentData().CustomID))
 		if err != nil {
 			fmt.Printf("Error unmarshalling browser data: %v\n", err)
 			return
 		}
 	}
 
-	// userID := interaction.Member.User.ID
-	posts := util.DisplayRedditSubreddit(browser.SubReddit)
-	embed := util.DisplayRedditPost(posts[browser.Page].ID, true)[0]
+	userID := interaction.Member.User.ID
+	if userID == browser.UserId {
+		posts := util.DisplayRedditSubreddit(browser.SubReddit)
+		embed := util.DisplayRedditPost(posts[browser.Page].ID, true)[0]
 
-	response := discordgo.WebhookEdit{
-		Embeds:     &[]*discordgo.MessageEmbed{embed},
-		Components: getActionRow(browser.Page, browser.SubReddit),
+		response := discordgo.WebhookEdit{
+			Embeds:     &[]*discordgo.MessageEmbed{embed},
+			Components: getActionRow(browser),
+		}
+
+		bot.InteractionResponseEdit(interaction.Interaction, &response)
 	}
-
-	bot.InteractionResponseEdit(interaction.Interaction, &response)
 }
 
 // func lambdaHandler(snsEvent events.SNSEvent) error {
@@ -111,20 +116,27 @@ func Handler(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
 // 	return err
 // }
 
-func getActionRow(page int, subreddit string) *[]discordgo.MessageComponent {
-	browser := browserTracker{
-		SubReddit: subreddit,
-		Page:      page - 1,
+func getActionRow(browser browserTracker) *[]discordgo.MessageComponent {
+	prevBrowser := browserTracker{
+		UserId:    browser.UserId,
+		SubReddit: browser.SubReddit,
+		Page:      browser.Page - 1,
 		Action:    "previous",
 	}
-	if browser.Page < 0 {
-		browser.Page = 0
+
+	nextBrowser := browserTracker{
+		UserId:    browser.UserId,
+		SubReddit: browser.SubReddit,
+		Page:      browser.Page + 1,
+		Action:    "next",
 	}
 
-	bdataPrev := browser.Marshal()
-	browser.Page = page + 1
-	browser.Action = "next"
-	bdataNext := browser.Marshal()
+	if prevBrowser.Page < 0 {
+		prevBrowser.Page = 0
+	}
+
+	bdataPrev := prevBrowser.Marshal()
+	bdataNext := nextBrowser.Marshal()
 
 	return &[]discordgo.MessageComponent{
 		discordgo.ActionsRow{
