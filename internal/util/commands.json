@@ -38,7 +38,8 @@
     },
     {
         "name": "bayman",
-        "type": 3
+        "type": 3,
+        "guild_id": "544911814886948865"
     },
     {
         "name": "help",

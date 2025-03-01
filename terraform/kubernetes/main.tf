@@ -51,7 +51,7 @@ resource "kubernetes_deployment" "copypastabot" {
           name = kubernetes_manifest.external_secret.manifest.spec.target.name
         }
         container {
-          image = "${data.terraform_remote_state.discord_bots_cluster.outputs.discord_bots_repo.repository_url}:${local.name}-0.0.9-SNAPSHOT-47efd93"
+          image = "${data.terraform_remote_state.discord_bots_cluster.outputs.discord_bots_repo.repository_url}:${local.name}-0.0.9-SNAPSHOT-d3be87b"
           name  = local.name
           env {
             name  = "AWS_REGION"
