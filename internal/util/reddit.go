@@ -25,7 +25,7 @@ func init() {
 	videos = []string{"youtube", "gfycat", "youtu"}
 }
 
-func createRedditClient(){
+func createRedditClient() {
 	clientId, _ := ConfigFile.GetRedditClientID()
 	secret, _ := ConfigFile.GetRedditClientSecret()
 	username, _ := ConfigFile.GetRedditUsername()
@@ -112,6 +112,9 @@ func DisplayRedditPost(redditPostID string, singleEmbed bool) (embeds []*discord
 
 		if i == 0 {
 			embed.Title = postCommnents.Post.Title
+			if len(embed.Title) >= 256 {
+				embed.Title = embed.Title[:252] + "..."
+			}
 			embed.Author = &discordgo.MessageEmbedAuthor{
 				Name: postCommnents.Post.Author,
 				URL:  ("https://www.reddit.com/u/" + postCommnents.Post.Author),

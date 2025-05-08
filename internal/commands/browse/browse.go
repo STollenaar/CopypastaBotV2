@@ -3,6 +3,7 @@ package browse
 import (
 	"errors"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 
@@ -74,7 +75,10 @@ func Handler(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
 			Components: getActionRow(browser),
 		}
 
-		bot.InteractionResponseEdit(interaction.Interaction, &response)
+		_, err := bot.InteractionResponseEdit(interaction.Interaction, &response)
+		if err != nil {
+			log.Println(err)
+		}
 	}
 }
 
