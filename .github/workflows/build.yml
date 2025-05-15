@@ -1,0 +1,116 @@
+name: Build and Release Workflow
+
+on:
+  push:
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: "Type of release (snapshot, release, pre-release)"
+        required: true
+        default: "pre-release"
+        type: choice
+        options:
+          - snapshot
+          - release
+          - pre-release
+
+env:
+  AWS_ACCOUNT_ID: 405934267152
+  BUILD_IAM_ARN: arn:aws:iam::405934267152:role/github-actions
+  DEPLOY_IAM_ARN: arn:aws:iam::405934267152:role/github-actions-deploy
+
+jobs:
+  build-project:
+    name: Build and Release Docker Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      # This is used to complete the identity challenge
+      # with sigstore/fulcio when running outside of PRs.
+      id-token: write
+
+    outputs:
+        image: ${{ steps.build-image.outputs.image }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Extract Go Version from go.work
+        id: go-version
+        run: |
+          GO_VERSION=$(grep '^go ' go.work | awk '{print $2}')
+          echo "GO_VERSION=$GO_VERSION" >> $GITHUB_ENV
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ steps.go-version.outputs.GO_VERSION }}
+
+      - name: Build Go Binary
+        run: |
+          mkdir -p build
+          cd cmd/copypastabotv2
+          CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -linkmode external -extldflags \"-static\"" -o ../../build/copypastabotv2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4 # More information on this action can be found below in the 'AWS Credentials' section
+        with:
+          role-to-assume: "${{ env.BUILD_IAM_ARN }}"
+          role-session-name: GithubActions
+          aws-region: ca-central-1
+
+      - name: Login to Amazon ECR Private
+        id: login-ecr-private
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          registry-type: private
+
+      - name: Build Docker Image
+        id: build-image
+        run: |
+          KIND=build/copypastabotv2
+          VERSION=$(date +%Y%m%d%H%M%S)
+          IMAGE="${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.ca-central-1.amazonaws.com/discordbots:copypastabotv2-${{ github.event.inputs.release_type }}-${VERSION}"
+          docker build --build-arg KIND=$KIND -t $IMAGE .
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      - name: Push Docker Image
+        run: |
+          docker push ${{ steps.build-image.outputs.image }}
+  deploy-with-terragrunt:
+    name: Deploy with Terragrunt
+    runs-on: arc-runner-copypastabotv2
+    needs: build-project
+    permissions:
+      contents: read
+      packages: write
+      # This is used to complete the identity challenge
+      # with sigstore/fulcio when running outside of PRs.
+      id-token: write
+    if: ${{ github.event_name == 'push' || github.event.inputs.release_type == 'release' || github.event.inputs.release_type == 'pre-release' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: "${{ env.DEPLOY_IAM_ARN }}"
+          role-session-name: GithubActions
+          aws-region: ca-central-1
+      - name: Run Terragrunt Apply
+        env:
+          IMAGE: ${{ needs.build-project.outputs.image }}
+        run: |
+          cd terraform/kubernetes_copypastabotv2
+          terragrunt apply -auto-approve -var "docker_image=${IMAGE}"    #   - name: Deploy
+    #     uses: gruntwork-io/terragrunt-action@v2
+    #     env:
+    #       TF_VAR_docker_image: ${{ needs.build-project.outputs.image }}
+    #     with:
+    #       tofu_version: v1.8.1
+    #       tg_version: v0.77.12
+    #       tg_dir: terraform/kubernetes
+    #       tg_command: "apply"

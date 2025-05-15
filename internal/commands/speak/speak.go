@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"strconv"
 	"time"
 
 	"github.com/jonas747/dca"
+	"github.com/stollenaar/aws-rotating-credentials-provider/credentials/filecreds"
 	"github.com/stollenaar/copypastabotv2/internal/commands/chat"
 	"github.com/stollenaar/copypastabotv2/internal/commands/markov"
 	"github.com/stollenaar/copypastabotv2/internal/util"
@@ -38,12 +38,22 @@ var (
 )
 
 func init() {
-	cfg, err := config.LoadDefaultConfig(context.TODO())
-	if err != nil {
-		log.Fatalf("configuration error: %v", err)
+	if os.Getenv("AWS_SHARED_CREDENTIALS_FILE") != "" {
+		provider := filecreds.NewFilecredentialsProvider(os.Getenv("AWS_SHARED_CREDENTIALS_FILE"))
+		pollyClient = polly.New(polly.Options{
+			Credentials: provider,
+			Region:      os.Getenv("AWS_REGION"),
+		})
+	} else {
+		// Create a config with the credentials provider.
+		cfg, err := config.LoadDefaultConfig(context.TODO())
+
+		if err != nil {
+			panic("configuration error, " + err.Error())
+		}
+		pollyClient = polly.NewFromConfig(cfg)
 	}
 
-	pollyClient = polly.NewFromConfig(cfg)
 	guildVC = make(map[string]*discordgo.VoiceConnection)
 }
 

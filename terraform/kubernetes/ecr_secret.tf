@@ -1,7 +1,3 @@
-data "hcp_vault_secrets_app" "copypastabot" {
-  app_name = local.name
-}
-
 resource "kubernetes_secret" "vault_auth" {
   metadata {
     name      = "default"
@@ -12,49 +8,6 @@ resource "kubernetes_secret" "vault_auth" {
     clientSecret = data.aws_ssm_parameter.vault_client_secret.value
   }
 }
-
-resource "kubernetes_manifest" "hcp_vault_auth" {
-  manifest = {
-    apiVersion = "secrets.hashicorp.com/v1beta1"
-    kind       = "HCPAuth"
-    metadata = {
-      name      = "default"
-      namespace = kubernetes_namespace.copypastabot.metadata.0.name
-    }
-    spec = {
-      allowedNamespaces = ["*"]
-      organizationID    = data.hcp_vault_secrets_app.copypastabot.organization_id
-      projectID         = data.hcp_vault_secrets_app.copypastabot.project_id
-      servicePrincipal = {
-        secretRef = kubernetes_secret.vault_auth.metadata.0.name
-      }
-    }
-  }
-}
-
-resource "kubernetes_manifest" "copypastabot_keys" {
-  manifest = {
-    apiVersion = "secrets.hashicorp.com/v1beta1"
-    kind       = "HCPVaultSecretsApp"
-    metadata = {
-      name      = local.name
-      namespace = kubernetes_namespace.copypastabot.metadata.0.name
-    }
-    spec = {
-      appName = local.name
-      destination = {
-        create = true
-        labels = {
-          hvs = "true"
-        }
-        name = local.name
-      }
-      hcpAuthRef   = kubernetes_manifest.hcp_vault_auth.manifest.metadata.name
-      refreshAfter = "1h"
-    }
-  }
-}
-
 
 resource "kubernetes_manifest" "vault_backend" {
   manifest = {
