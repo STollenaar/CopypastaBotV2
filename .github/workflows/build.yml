@@ -80,7 +80,7 @@ jobs:
           docker push ${{ steps.build-image.outputs.image }}
   deploy-with-terragrunt:
     name: Deploy with Terragrunt
-    runs-on: arc-runner-copypastabotv2
+    runs-on: arc-runner-copypastabot
     needs: build-project
     permissions:
       contents: read
