@@ -1,6 +1,6 @@
 locals {
   name            = "copypastabotv2"
-  kubeconfig_file = "/home/stollenaar/.kube/config"
+  kubeconfig_file = get_env("KUBECONFIG", "")
 
   # Automatically load provider variables
   provider_vars = read_terragrunt_config("${get_original_terragrunt_dir()}/provider.hcl")

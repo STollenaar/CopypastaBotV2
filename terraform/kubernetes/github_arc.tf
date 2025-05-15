@@ -24,7 +24,7 @@ resource "kubernetes_role_binding" "github_arc_admin" {
 
   subject {
     kind      = "ServiceAccount"
-    name      = "arc-runner-copypastabotv2-gha-rs-kube-mode"
+    name      = "arc-runner-copypastabot-gha-rs-kube-mode"
     namespace = data.terraform_remote_state.kubernetes_cluster.outputs.github_arc.namespace.metadata.0.name
   }
 }
