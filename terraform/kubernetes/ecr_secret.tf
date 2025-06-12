@@ -11,7 +11,7 @@ resource "kubernetes_secret" "vault_auth" {
 
 resource "kubernetes_manifest" "vault_backend" {
   manifest = {
-    apiVersion = "external-secrets.io/v1beta1"
+    apiVersion = "external-secrets.io/v1"
     kind       = "SecretStore"
     metadata = {
       name      = "vault-backend"
@@ -37,7 +37,7 @@ resource "kubernetes_manifest" "vault_backend" {
 
 resource "kubernetes_manifest" "external_secret" {
   manifest = {
-    apiVersion = "external-secrets.io/v1beta1"
+    apiVersion = "external-secrets.io/v1"
     kind       = "ExternalSecret"
     metadata = {
       name      = "ecr-auth"
