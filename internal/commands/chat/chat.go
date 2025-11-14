@@ -107,7 +107,7 @@ func GetChatGPTResponse(promptName, message, userID string) (util.OllamaGenerate
 	}
 	prompt = fmt.Sprintf(prompt, userID)
 	return util.CreateOllamaGeneration(util.OllamaGenerateRequest{
-		Model:  "mistral:7b",
+		Model:  util.ConfigFile.OLLAMA_MODEL,
 		Prompt: prompt,
 		Stream: false,
 	})

@@ -11,6 +11,7 @@ locals {
     AWS_PARAMETER_OPENAI_KEY           = "/openai/api_key"
     STATSBOT_URL                       = "statisticsbot.statisticsbot.svc.cluster.local"
     OLLAMA_URL                         = "ollama.ollama.svc.cluster.local:11434"
+    OLLAMA_MODEL                       = "llama3.2:3b"
     AWS_OLLAMA_AUTH_USERNAME           = "/ollama/dan_username"
     AWS_OLLAMA_AUTH_PASSWORD           = "/ollama/dan_password"
   }

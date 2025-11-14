@@ -57,6 +57,7 @@ type Config struct {
 	DATE_STRING string
 
 	OLLAMA_URL       string
+	OLLAMA_MODEL     string
 	OLLAMA_AUTH_TYPE string
 
 	AWS_OLLAMA_AUTH_USERNAME string
@@ -127,6 +128,7 @@ func init() {
 		OPENAI_KEY:                         os.Getenv("OPENAI_KEY"),
 		DATE_STRING:                        os.Getenv("DATE_STRING"),
 		OLLAMA_URL:                         os.Getenv("OLLAMA_URL"),
+		OLLAMA_MODEL:                       os.Getenv("OLLAMA_MODEL"),
 		OLLAMA_AUTH_TYPE:                   os.Getenv("OLLAMA_AUTH_TYPE"),
 		OLLAMA_AUTH_USERNAME:               os.Getenv("OLLAMA_AUTH_USERNAME"),
 		OLLAMA_AUTH_PASSWORD:               os.Getenv("OLLAMA_AUTH_PASSWORD"),
