@@ -55,6 +55,14 @@ type Config struct {
 	OPENAI_KEY     string
 
 	DATE_STRING string
+
+	OLLAMA_URL       string
+	OLLAMA_AUTH_TYPE string
+
+	AWS_OLLAMA_AUTH_USERNAME string
+	OLLAMA_AUTH_USERNAME     string
+	AWS_OLLAMA_AUTH_PASSWORD string
+	OLLAMA_AUTH_PASSWORD     string
 }
 
 var (
@@ -118,6 +126,12 @@ func init() {
 		STATISTICS_BOT:                     os.Getenv("STATSBOT_URL"),
 		OPENAI_KEY:                         os.Getenv("OPENAI_KEY"),
 		DATE_STRING:                        os.Getenv("DATE_STRING"),
+		OLLAMA_URL:                         os.Getenv("OLLAMA_URL"),
+		OLLAMA_AUTH_TYPE:                   os.Getenv("OLLAMA_AUTH_TYPE"),
+		OLLAMA_AUTH_USERNAME:               os.Getenv("OLLAMA_AUTH_USERNAME"),
+		OLLAMA_AUTH_PASSWORD:               os.Getenv("OLLAMA_AUTH_PASSWORD"),
+		AWS_OLLAMA_AUTH_USERNAME:           os.Getenv("AWS_OLLAMA_AUTH_USERNAME"),
+		AWS_OLLAMA_AUTH_PASSWORD:           os.Getenv("AWS_OLLAMA_AUTH_PASSWORD"),
 	}
 
 	if ConfigFile.TERMINAL_REGEX == "" {
@@ -125,7 +139,6 @@ func init() {
 	}
 
 }
-
 
 func init() {
 
@@ -314,4 +327,27 @@ func (c *Config) SendStatsBotRequest(sqsObject Object) (Object, error) {
 	json.Unmarshal(body, &object)
 	fmt.Printf("Response body: %s\n", string(body))
 	return object, err
+}
+
+func GetOllamaUsername() (string, error) {
+	if ConfigFile.OLLAMA_AUTH_USERNAME == "" && ConfigFile.AWS_OLLAMA_AUTH_USERNAME == "" {
+		log.Fatal("OLLAMA_AUTH_USERNAME or AWS_OLLAMA_AUTH_USERNAME is not set")
+	}
+
+	if ConfigFile.OLLAMA_AUTH_USERNAME != "" {
+		return ConfigFile.OLLAMA_AUTH_USERNAME, nil
+	}
+	return getAWSParameter(ConfigFile.AWS_OLLAMA_AUTH_USERNAME)
+}
+
+func GetOllamaPassword() (string, error) {
+	if ConfigFile.OLLAMA_AUTH_PASSWORD == "" && ConfigFile.AWS_OLLAMA_AUTH_PASSWORD == "" {
+		log.Fatal("OLLAMA_AUTH_PASSWORD or AWS_OLLAMA_AUTH_PASSWORD is not set")
+	}
+
+	if ConfigFile.OLLAMA_AUTH_PASSWORD != "" {
+		return ConfigFile.OLLAMA_AUTH_PASSWORD, nil
+	}
+
+	return getAWSParameter(ConfigFile.AWS_OLLAMA_AUTH_PASSWORD)
 }

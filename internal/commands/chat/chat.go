@@ -4,7 +4,6 @@ import (
 	_ "embed"
 	"fmt"
 
-	"github.com/sashabaranov/go-openai"
 	"github.com/stollenaar/copypastabotv2/internal/util"
 
 	"github.com/bwmarrin/discordgo"
@@ -19,8 +18,6 @@ var (
 	systemCaveman string
 	//go:embed insultRole.txt
 	systemInsult string
-	//go:embed baymanRole.txt
-	systemBayman string
 )
 
 func Handler(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
@@ -59,7 +56,7 @@ func Handler(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
 		fallthrough
 	case "insult":
 		// Getting around the 4096 word limit
-		contents := util.BreakContent(chatRSP.Choices[0].Message.Content, 4096)
+		contents := util.BreakContent(chatRSP.Response, 4096)
 		var embeds []*discordgo.MessageEmbed
 		for _, content := range contents {
 			embed := discordgo.MessageEmbed{}
@@ -90,11 +87,9 @@ func Handler(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
 
 }
 
-func GetChatGPTResponse(promptName, message, userID string) (openai.ChatCompletionResponse, error) {
+func GetChatGPTResponse(promptName, message, userID string) (util.OllamaGenerateResponse, error) {
 	var prompt string
 	switch promptName {
-	case "bayman":
-		promptName = systemBayman
 	case "insult":
 		prompt = systemInsult
 	case "caveman":
@@ -110,8 +105,12 @@ func GetChatGPTResponse(promptName, message, userID string) (openai.ChatCompleti
 	case "speak":
 		prompt = systemPromptSpeak
 	}
-
-	return util.GetChatGPTResponse(prompt, message, userID)
+	prompt = fmt.Sprintf(prompt, userID)
+	return util.CreateOllamaGeneration(util.OllamaGenerateRequest{
+		Model:  "mistral:7b",
+		Prompt: prompt,
+		Stream: false,
+	})
 }
 
 func extractMessageData(optionName string, interaction *discordgo.Interaction) {

@@ -99,7 +99,7 @@ func Handler(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
 				bot.InteractionResponseEdit(interaction.Interaction, &response)
 				return
 			}
-			speakObject.Data = data.Choices[0].Message.Content
+			speakObject.Data = data.Response
 		}
 
 	} else {
