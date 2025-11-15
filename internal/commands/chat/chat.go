@@ -2,6 +2,7 @@ package chat
 
 import (
 	_ "embed"
+	"encoding/json"
 	"fmt"
 
 	"github.com/stollenaar/copypastabotv2/internal/util"
@@ -19,6 +20,10 @@ var (
 	//go:embed insultRole.txt
 	systemInsult string
 )
+
+type ChatResponse struct {
+	Response string `json:"response"`
+}
 
 func Handler(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
 	bot.InteractionRespond(interaction.Interaction, &discordgo.InteractionResponse{
@@ -87,7 +92,7 @@ func Handler(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
 
 }
 
-func GetChatGPTResponse(promptName, message, userID string) (util.OllamaGenerateResponse, error) {
+func GetChatGPTResponse(promptName, message, userID string) (out ChatResponse,err error) {
 	var prompt string
 	switch promptName {
 	case "insult":
@@ -106,11 +111,30 @@ func GetChatGPTResponse(promptName, message, userID string) (util.OllamaGenerate
 		prompt = systemPromptSpeak
 	}
 	prompt = fmt.Sprintf(prompt, userID)
-	return util.CreateOllamaGeneration(util.OllamaGenerateRequest{
+	resp, err := util.CreateOllamaGeneration(util.OllamaGenerateRequest{
 		Model:  util.ConfigFile.OLLAMA_MODEL,
 		Prompt: prompt,
 		Stream: false,
+		Format: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"response": map[string]interface{}{
+					"type": "string",
+				},
+			},
+			"required": []string{
+				"response",
+			},
+		},
 	})
+
+	if err != nil {
+		return ChatResponse{}, nil
+	}
+
+	err = json.Unmarshal([]byte(resp.Response), &out)
+	return
+
 }
 
 func extractMessageData(optionName string, interaction *discordgo.Interaction) {
