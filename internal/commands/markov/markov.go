@@ -2,41 +2,49 @@ package markov
 
 import (
 	"fmt"
-	"strings"
+	"log/slog"
 
+	"github.com/disgoorg/disgo/discord"
+	"github.com/disgoorg/disgo/events"
 	"github.com/stollenaar/copypastabotv2/internal/util"
 	pkgMarkov "github.com/stollenaar/copypastabotv2/pkg/markov"
-
-	"github.com/bwmarrin/discordgo"
 )
 
-func Handler(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
-	bot.InteractionRespond(interaction.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: "Loading...",
-		},
-	})
+var (
+	MarkovCmd = MarkovCommand{
+		Name: "markov",
+		Description: "Imitate someone or from a reddit post with some weird results",
+	}
+)
 
-	parsedArguments := util.ParseArguments([]string{"url", "user"}, interaction.ApplicationCommandData().Options)
+type MarkovCommand struct {
+	Name string
+	Description string
+}
 
-	var ok bool
-	var url, user, markovData string
-	if url, ok = parsedArguments["Url"]; ok {
-		markovData = HandleURL(url)
-	} else if user, ok = parsedArguments["User"]; ok {
-		user = strings.ReplaceAll(user, "<", "")
-		user = strings.ReplaceAll(user, ">", "")
-		user = strings.ReplaceAll(user, "@", "")
+func (m MarkovCommand) Handler(event *events.ApplicationCommandInteractionCreate) {
+	err := event.DeferCreateMessage(util.ConfigFile.SetEphemeral() == discord.MessageFlagEphemeral)
 
+	if err != nil {
+		slog.Error("Error deferring: ", slog.Any("err", err))
+		return
+	}
+
+	sub := event.SlashCommandInteractionData()
+
+	var markovData string
+
+	if url, ok := sub.Options["url"]; ok {
+		markovData = HandleURL(url.String())
+	} else if user, ok := sub.Options["user"]; ok {
 		sqsMessage := util.Object{
-			GuildID:       interaction.GuildID,
-			ApplicationID: interaction.AppID,
+			GuildID:       event.GuildID().String(),
+			ApplicationID: event.ApplicationID().String(),
 			Command:       "markov",
 			Type:          "user",
-			Data:          user,
-			ChannelID:     interaction.ChannelID,
-			Token:         interaction.Token,
+			Data:          user.Snowflake().String(),
+			ChannelID:     event.Channel().ID().String(),
+			Token:         event.Token(),
 		}
 
 		resp, err := util.ConfigFile.SendStatsBotRequest(sqsMessage)
@@ -46,12 +54,28 @@ func Handler(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
 		}
 		markovData = HandleUser(resp.Data)
 	}
-	fmt.Println(url, user)
-	response := discordgo.WebhookEdit{
-		Content: &markovData,
-	}
 
-	bot.InteractionResponseEdit(interaction.Interaction, &response)
+	_, err = event.Client().Rest.UpdateInteractionResponse(event.ApplicationID(), event.Token(), discord.MessageUpdate{
+		Content: &markovData,
+	})
+	if err != nil {
+		slog.Error("Error editing the response:", slog.Any("err", err))
+	}
+}
+
+func (m MarkovCommand) CreateCommandArguments() []discord.ApplicationCommandOption {
+	return []discord.ApplicationCommandOption{
+		discord.ApplicationCommandOptionString{
+			Name:        "url",
+			Description: "URL of the page to make a markov chain from",
+			Required:    false,
+		},
+		discord.ApplicationCommandOptionUser{
+			Name:        "user",
+			Description: "User the create a markov chain of",
+			Required:    false,
+		},
+	}
 }
 
 func HandleURL(input string) string {

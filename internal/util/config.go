@@ -16,6 +16,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
+	"github.com/disgoorg/disgo/discord"
 	"github.com/joho/godotenv"
 	"github.com/stollenaar/aws-rotating-credentials-provider/credentials/filecreds"
 )
@@ -26,6 +27,8 @@ type Webhook struct {
 }
 
 type Config struct {
+	DEBUG bool
+
 	DISCORD_TOKEN         string
 	DISCORD_WEBHOOK_ID    string
 	DISCORD_WEBHOOK_TOKEN string
@@ -172,15 +175,19 @@ func init() {
 	}
 }
 
-func (c *Config) GetDiscordToken() (string, error) {
-	if c.DISCORD_TOKEN == "" && c.AWS_PARAMETER_DISCORD_TOKEN == "" {
-		return "", fmt.Errorf("DISCORD_TOKEN or AWS_PARAMETER_DISCORD_TOKEN is not set: %s", string(debug.Stack()))
+func (c *Config) GetDiscordToken() string {
+	if ConfigFile.DISCORD_TOKEN == "" && ConfigFile.AWS_PARAMETER_DISCORD_TOKEN == "" {
+		log.Fatal("DISCORD_TOKEN or AWS_PARAMETER_NAME is not set")
 	}
 
-	if c.DISCORD_TOKEN != "" {
-		return c.DISCORD_TOKEN, nil
+	if ConfigFile.DISCORD_TOKEN != "" {
+		return ConfigFile.DISCORD_TOKEN
 	}
-	return getAWSParameter(c.AWS_PARAMETER_DISCORD_TOKEN)
+	out, err := getAWSParameter(ConfigFile.AWS_PARAMETER_DISCORD_TOKEN)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return out
 }
 
 func (c *Config) GetDiscordWebhook() (Webhook, error) {
@@ -352,4 +359,18 @@ func GetOllamaPassword() (string, error) {
 	}
 
 	return getAWSParameter(ConfigFile.AWS_OLLAMA_AUTH_PASSWORD)
+}
+
+func (c *Config) SetEphemeral() discord.MessageFlags {
+	if c.DEBUG {
+		return discord.MessageFlagEphemeral
+	} else {
+		return discord.MessageFlagsNone
+	}
+}
+
+func (c *Config) SetComponentV2Flags() *discord.MessageFlags {
+	eph := c.SetEphemeral()
+	eph = eph.Add(discord.MessageFlagIsComponentsV2)
+	return &eph
 }

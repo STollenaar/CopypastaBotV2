@@ -1,41 +1,71 @@
 package pasta
 
 import (
+	"log/slog"
 	"net/url"
 	"strings"
 
+	"github.com/disgoorg/disgo/discord"
+	"github.com/disgoorg/disgo/events"
 	"github.com/stollenaar/copypastabotv2/internal/util"
-
-	"github.com/bwmarrin/discordgo"
 )
 
-func Handler(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
-	bot.InteractionRespond(interaction.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: "Loading...",
-		},
-	})
+var (
+	PastaCmd = PastaCommand{
+		Name:        "pasta",
+		Description: "Post a reddit post with an url or post id",
+	}
+)
 
-	var response discordgo.WebhookEdit
+type PastaCommand struct {
+	Name        string
+	Description string
+}
 
-	parsedArguments := util.ParseArguments([]string{"url", "postid"}, interaction.ApplicationCommandData().Options)
+func (p PastaCommand) Handler(event *events.ApplicationCommandInteractionCreate) {
+	err := event.DeferCreateMessage(util.ConfigFile.SetEphemeral() == discord.MessageFlagEphemeral)
 
-	if parsedArguments["Url"] != "" {
-		if uri, err := url.ParseRequestURI(parsedArguments["Url"]); err == nil {
+	if err != nil {
+		slog.Error("Error deferring: ", slog.Any("err", err))
+		return
+	}
+
+	sub := event.SlashCommandInteractionData()
+
+	var redditPostID string
+	if argUrl, ok := sub.Options["url"]; ok {
+		if uri, err := url.ParseRequestURI(argUrl.String()); err == nil {
 			path := strings.Split(uri.Path, "/")
 			postID := findIndex(path, "comments")
-			if postID != -1 {
-				parsedArguments["Postid"] = path[postID+1]
-			}
-			parsedArguments["Postid"] = path[postID+1]
+			redditPostID = path[postID+1]
 		}
 	}
-	if parsedArguments["Postid"] != "" {
-		embeds := util.DisplayRedditPost(parsedArguments["Postid"], false)
-		response.Embeds = &embeds
+	if postid, ok := sub.Options["postid"]; ok {
+		redditPostID = postid.String()
 	}
-	bot.InteractionResponseEdit(interaction.Interaction, &response)
+	embeds := util.DisplayRedditPost(redditPostID, false)
+
+	_, err = event.Client().Rest.UpdateInteractionResponse(event.ApplicationID(), event.Token(), discord.MessageUpdate{
+		Embeds: &embeds,
+	})
+	if err != nil {
+		slog.Error("Error editing the response:", slog.Any("err", err))
+	}
+}
+
+func (p PastaCommand) CreateCommandArguments() []discord.ApplicationCommandOption {
+	return []discord.ApplicationCommandOption{
+		discord.ApplicationCommandOptionString{
+			Name:        "url",
+			Description: "URL of the reddit post",
+			Required:    false,
+		},
+		discord.ApplicationCommandOptionString{
+			Name:        "postid",
+			Description: "The Reddit postID of the post",
+			Required:    false,
+		},
+	}
 }
 
 func findIndex(array []string, param string) int {

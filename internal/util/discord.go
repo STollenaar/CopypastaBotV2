@@ -67,9 +67,8 @@ func SendRequest(method, interactionID, interactionToken string, kind KIND, data
 		return nil, err
 	}
 	req.Header.Add("Content-Type", "application/json")
-	if token, err := ConfigFile.GetDiscordToken(); err == nil {
-		req.Header.Add("Authorization", "Bot "+token)
-	}
+	token := ConfigFile.GetDiscordToken()
+	req.Header.Add("Authorization", "Bot "+token)
 	client := &http.Client{}
 	fmt.Println(*req)
 	resp, err := client.Do(req)

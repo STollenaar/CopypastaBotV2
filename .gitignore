@@ -19,3 +19,4 @@ dist
 terraform/**/.terraform/
 **/bootstrap
 **/main
+vendor/

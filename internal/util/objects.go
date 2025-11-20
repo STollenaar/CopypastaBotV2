@@ -93,3 +93,7 @@ func GetMessageObject(object Object) (discordgo.Message, error) {
 	}
 	return message, nil
 }
+
+func Pointer[T any](d T) *T {
+	return &d
+}

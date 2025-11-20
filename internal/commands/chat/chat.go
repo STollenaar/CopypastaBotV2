@@ -4,10 +4,11 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 
+	"github.com/disgoorg/disgo/discord"
+	"github.com/disgoorg/disgo/events"
 	"github.com/stollenaar/copypastabotv2/internal/util"
-
-	"github.com/bwmarrin/discordgo"
 )
 
 var (
@@ -19,38 +20,100 @@ var (
 	systemCaveman string
 	//go:embed insultRole.txt
 	systemInsult string
+
+	ChatCmd = ChatCommand{
+		Name:        "chat",
+		Description: "Chat with the bot",
+		MessageCommands: []string{"caveman", "insult", "respond"},
+	}
 )
 
 type ChatResponse struct {
 	Response string `json:"response"`
 }
 
-func Handler(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
-	bot.InteractionRespond(interaction.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: "Loading...",
-		},
-	})
-	if interaction.Data.(discordgo.ApplicationCommandInteractionData).Resolved != nil {
-		extractMessageData("message", interaction.Interaction)
-	}
-	parsedArguments := util.ParseArguments([]string{"message"}, interaction.ApplicationCommandData().Options)
+type ChatCommand struct {
+	Name            string
+	Description     string
+	MessageCommands []string
+}
 
-	chatRSP, err := GetChatGPTResponse(interaction.ApplicationCommandData().Name, parsedArguments["Message"], interaction.Member.User.ID)
+func (c ChatCommand) Handler(event *events.ApplicationCommandInteractionCreate) {
+	err := event.DeferCreateMessage(util.ConfigFile.SetEphemeral() == discord.MessageFlagEphemeral)
+
+	if err != nil {
+		slog.Error("Error deferring: ", slog.Any("err", err))
+		return
+	}
+
+	sub := event.SlashCommandInteractionData()
+	chatRSP, err := GetChatGPTResponse(event.Data.CommandName(), sub.Options["message"].String(), event.User().ID.String())
 
 	if err != nil {
 		fmt.Println(fmt.Errorf("error interacting with chatgpt char: %e", err))
 		e := "If you see this, and error likely happened. Whoops"
-		response := discordgo.WebhookEdit{
-			Content: &e,
-		}
-		bot.InteractionResponseEdit(interaction.Interaction, &response)
 
+		_, err = event.Client().Rest.UpdateInteractionResponse(event.ApplicationID(), event.Token(), discord.MessageUpdate{
+			Content: &e,
+		})
+		if err != nil {
+			slog.Error("Error editing the response:", slog.Any("err", err))
+		}
 		return
 	}
 
-	switch interaction.ApplicationCommandData().Name {
+	// Getting around the 4096 word limit
+	contents := util.BreakContent(chatRSP.Response, 4096)
+	var embeds []discord.Embed
+	for _, content := range contents {
+		embed := discord.Embed{}
+		embed.Description = content
+		embeds = append(embeds, embed)
+	}
+
+	_, err = event.Client().Rest.UpdateInteractionResponse(event.ApplicationID(), event.Token(), discord.MessageUpdate{
+		Embeds: &embeds,
+	})
+	if err != nil {
+		slog.Error("Error editing the response:", slog.Any("err", err))
+	}
+
+}
+
+func (c ChatCommand) CreateCommandArguments() []discord.ApplicationCommandOption {
+	return []discord.ApplicationCommandOption{
+		discord.ApplicationCommandOptionString{
+			Name:        "message",
+			Description: "message for the bot",
+			Required:    true,
+		},
+	}
+}
+
+func (c ChatCommand) MessageCommandHandler(event *events.ApplicationCommandInteractionCreate) {
+	err := event.DeferCreateMessage(util.ConfigFile.SetEphemeral() == discord.MessageFlagEphemeral)
+
+	if err != nil {
+		slog.Error("Error deferring: ", slog.Any("err", err))
+		return
+	}
+
+	chatRSP, err := GetChatGPTResponse(event.Data.CommandName(), event.MessageCommandInteractionData().TargetMessage().Content, event.User().ID.String())
+
+	if err != nil {
+		fmt.Println(fmt.Errorf("error interacting with chatgpt char: %e", err))
+		e := "If you see this, and error likely happened. Whoops"
+
+		_, err = event.Client().Rest.UpdateInteractionResponse(event.ApplicationID(), event.Token(), discord.MessageUpdate{
+			Content: &e,
+		})
+		if err != nil {
+			slog.Error("Error editing the response:", slog.Any("err", err))
+		}
+		return
+	}
+
+	switch event.Data.CommandName() {
 	case "bayman":
 		fallthrough
 	case "respond":
@@ -62,24 +125,20 @@ func Handler(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
 	case "insult":
 		// Getting around the 4096 word limit
 		contents := util.BreakContent(chatRSP.Response, 4096)
-		var embeds []*discordgo.MessageEmbed
+		var embeds []discord.Embed
 		for _, content := range contents {
-			embed := discordgo.MessageEmbed{}
+			embed := discord.Embed{}
 			embed.Description = content
-			embeds = append(embeds, &embed)
+			embeds = append(embeds, embed)
 		}
-		response := discordgo.WebhookEdit{
-			Embeds: &embeds,
-			AllowedMentions: &discordgo.MessageAllowedMentions{
-				Users: []string{},
-				Roles: []string{},
-			},
-		}
-		_, err := bot.InteractionResponseEdit(interaction.Interaction, &response)
 
+		_, err := event.Client().Rest.UpdateInteractionResponse(event.ApplicationID(), event.Token(), discord.MessageUpdate{
+			Embeds: &embeds,
+		})
 		if err != nil {
-			fmt.Println(fmt.Errorf("error creating char: %e", err))
+			slog.Error("Error editing the response:", slog.Any("err", err))
 		}
+
 	case "respond-vc":
 		fallthrough
 	case "caveman-vc":
@@ -87,12 +146,11 @@ func Handler(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
 	case "speak":
 
 	default:
-		fmt.Println(fmt.Errorf("unimplemented command: %s", interaction.ApplicationCommandData().Name))
+		fmt.Println(fmt.Errorf("unimplemented command: %s", event.Data.CommandName()))
 	}
-
 }
 
-func GetChatGPTResponse(promptName, message, userID string) (out ChatResponse,err error) {
+func GetChatGPTResponse(promptName, message, userID string) (out ChatResponse, err error) {
 	var prompt string
 	switch promptName {
 	case "insult":
@@ -135,15 +193,4 @@ func GetChatGPTResponse(promptName, message, userID string) (out ChatResponse,er
 	err = json.Unmarshal([]byte(resp.Response), &out)
 	return
 
-}
-
-func extractMessageData(optionName string, interaction *discordgo.Interaction) {
-	messageData := interaction.Data.(discordgo.ApplicationCommandInteractionData).Resolved.Messages[interaction.Data.(discordgo.ApplicationCommandInteractionData).TargetID].Content
-	appData := interaction.ApplicationCommandData()
-	appData.Options = append(appData.Options, &discordgo.ApplicationCommandInteractionDataOption{
-		Name:  optionName,
-		Type:  3,
-		Value: messageData,
-	})
-	interaction.Data = appData
 }

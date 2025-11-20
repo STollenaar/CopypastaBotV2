@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/disgoorg/disgo/discord"
 	"github.com/vartanbeno/go-reddit/v2/reddit"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -75,7 +76,7 @@ func GetRedditPost(redditPostID string) *reddit.PostAndComments {
 	return postCommnents
 }
 
-func DisplayRedditPost(redditPostID string, singleEmbed bool) (embeds []*discordgo.MessageEmbed) {
+func DisplayRedditPost(redditPostID string, singleEmbed bool) (embeds []discord.Embed) {
 	postCommnents := GetRedditPost(redditPostID)
 
 	body := postCommnents.Post.Body
@@ -91,16 +92,16 @@ func DisplayRedditPost(redditPostID string, singleEmbed bool) (embeds []*discord
 	}
 
 	for i, content := range contents {
-		embed := discordgo.MessageEmbed{}
+		embed := discord.Embed{}
 
 		// Making sure if it's not a text content that the embed is set correctly
 		if uri, err := url.ParseRequestURI(content); err == nil {
 			if arrayContainsSub(images, uri.RequestURI()) {
-				embed.Image = &discordgo.MessageEmbedImage{
+				embed.Image = &discord.EmbedResource{
 					URL: content,
 				}
 			} else if arrayContainsSub(videos, uri.RequestURI()) {
-				embed.Video = &discordgo.MessageEmbedVideo{
+				embed.Video = &discord.EmbedResource{
 					URL: content,
 				}
 			} else {
@@ -115,7 +116,7 @@ func DisplayRedditPost(redditPostID string, singleEmbed bool) (embeds []*discord
 			if len(embed.Title) >= 256 {
 				embed.Title = embed.Title[:252] + "..."
 			}
-			embed.Author = &discordgo.MessageEmbedAuthor{
+			embed.Author = &discord.EmbedAuthor{
 				Name: postCommnents.Post.Author,
 				URL:  ("https://www.reddit.com/u/" + postCommnents.Post.Author),
 			}
@@ -123,18 +124,18 @@ func DisplayRedditPost(redditPostID string, singleEmbed bool) (embeds []*discord
 
 		// Only adding the footer if this is the last entry
 		if i == len(contents)-1 {
-			embed.Fields = []*discordgo.MessageEmbedField{
+			embed.Fields = []discord.EmbedField{
 				{
 					Name:   "Reddit Thread:",
 					Value:  ("https://www.reddit.com" + postCommnents.Post.Permalink),
-					Inline: true,
+					Inline: Pointer(true),
 				},
 			}
-			embed.Footer = &discordgo.MessageEmbedFooter{
+			embed.Footer = &discord.EmbedFooter{
 				Text: ("PostID: " + postCommnents.Post.ID),
 			}
 		}
-		embeds = append(embeds, &embed)
+		embeds = append(embeds, embed)
 	}
 	return embeds
 }

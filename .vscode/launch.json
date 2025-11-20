@@ -5,12 +5,43 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch Package",
+            "name": "Launch copypastabot",
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "cwd": "cmd/copypastabotv2",
-            "program": "cmd/copypastabotv2/main.go",
-        }
+            "cwd": "${workspaceFolder}/cmd/copypastabotv2",
+            "program": "${workspaceFolder}/cmd/copypastabotv2/main.go",
+            "env": {
+                "CGO_ENABLED": "1",
+                "CC": "gcc",
+                "CGO_CFLAGS": "-g -O2",
+                "CGO_LDFLAGS": "-v"
+            },
+            "args": [
+                "--guild=544911814886948865",
+                "--debug",
+                "--rmcmd"
+            ]
+        },
+        {
+            "name": "Purge copypastabot commands",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "cwd": "${workspaceFolder}/cmd/copypastabotv2",
+            "program": "${workspaceFolder}/cmd/copypastabotv2/main.go",
+            "env": {
+                "CGO_ENABLED": "1",
+                "CC": "gcc",
+                "CGO_CFLAGS": "-g -O2",
+                "CGO_LDFLAGS": "-v"
+            },
+            "args": [
+                "--guild=544911814886948865",
+                "--debug",
+                "--rmcmd",
+                "--purgecmd"
+            ]
+        },
     ]
 }

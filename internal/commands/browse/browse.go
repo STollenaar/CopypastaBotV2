@@ -3,13 +3,26 @@ package browse
 import (
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"strconv"
 	"strings"
 
-	"github.com/bwmarrin/discordgo"
+	"github.com/disgoorg/disgo/discord"
+	"github.com/disgoorg/disgo/events"
 	"github.com/stollenaar/copypastabotv2/internal/util"
 )
+
+var (
+	BrowseCmd = BrowseCommand{
+		Name:        "browse",
+		Description: "Browse reddit from the comfort of discord",
+	}
+)
+
+type BrowseCommand struct {
+	Name        string
+	Description string
+}
 
 type browserTracker struct {
 	UserId    string `json:"userId"`
@@ -35,92 +48,78 @@ func (b *browserTracker) Unmarshal(data []byte) error {
 	return nil
 }
 
-func Handler(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
-	var parsedArguments util.CommandParsed
+func (b BrowseCommand) Handler(event *events.ApplicationCommandInteractionCreate) {
 	var browser browserTracker
-	if interaction.Type == discordgo.InteractionType(discordgo.InteractionApplicationCommand) {
-		bot.InteractionRespond(interaction.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "Loading...",
-			},
-		})
-		parsedArguments = util.ParseArguments([]string{"subreddit"}, interaction.ApplicationCommandData().Options)
-		browser = browserTracker{
-			SubReddit: parsedArguments["Subreddit"],
-			Page:      0,
-			UserId:    interaction.Member.User.ID,
-		}
-	} else {
-		bot.InteractionRespond(interaction.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseDeferredMessageUpdate,
-			Data: &discordgo.InteractionResponseData{
-				Content: "Loading...",
-			},
-		})
-		err := browser.Unmarshal([]byte(interaction.Interaction.MessageComponentData().CustomID))
-		if err != nil {
-			fmt.Printf("Error unmarshalling browser data: %v\n", err)
-			return
-		}
+
+	err := event.DeferCreateMessage(util.ConfigFile.SetEphemeral() == discord.MessageFlagEphemeral)
+
+	if err != nil {
+		slog.Error("Error deferring: ", slog.Any("err", err))
+		return
 	}
 
-	userID := interaction.Member.User.ID
-	if userID == browser.UserId {
-		posts := util.DisplayRedditSubreddit(browser.SubReddit)
-		embed := util.DisplayRedditPost(posts[browser.Page].ID, true)[0]
+	sub := event.SlashCommandInteractionData()
 
-		response := discordgo.WebhookEdit{
-			Embeds:     &[]*discordgo.MessageEmbed{embed},
-			Components: getActionRow(browser),
-		}
+	browser = browserTracker{
+		SubReddit: sub.Options["subreddit"].String(),
+		Page:      0,
+		UserId:    event.User().ID.String(),
+	}
 
-		_, err := bot.InteractionResponseEdit(interaction.Interaction, &response)
-		if err != nil {
-			log.Println(err)
-		}
+	posts := util.DisplayRedditSubreddit(browser.SubReddit)
+	embed := util.DisplayRedditPost(posts[browser.Page].ID, true)[0]
+
+	_, err = event.Client().Rest.UpdateInteractionResponse(event.ApplicationID(), event.Token(), discord.MessageUpdate{
+		Embeds:     &[]discord.Embed{embed},
+		Components: getActionRow(browser),
+	})
+	if err != nil {
+		slog.Error("Error editing the response:", slog.Any("err", err))
 	}
 }
 
-// func lambdaHandler(snsEvent events.SNSEvent) error {
-// 	var interaction discordgo.Interaction
-// 	var response discordgo.WebhookEdit
+func (b BrowseCommand) CreateCommandArguments() []discord.ApplicationCommandOption {
+	return []discord.ApplicationCommandOption{
+		discord.ApplicationCommandOptionString{
+			Name:        "subreddit",
+			Description: "subreddit",
+			Required:    true,
+		},
+	}
+}
 
-// 	err := json.Unmarshal([]byte(snsEvent.Records[0].SNS.Message), &req)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	err = json.Unmarshal([]byte(req.Body), &interaction)
-// 	if err != nil {
-// 		return err
-// 	}
+func (b BrowseCommand) ComponentHandler(event *events.ComponentInteractionCreate) {
+	if event.Message.Interaction.User.ID != event.Member().User.ID {
+		return
+	}
 
-// 	parsedArguments := util.ParseArguments([]string{"name"}, interaction.ApplicationCommandData().Options)
-// 	if parsedArguments["Name"] == "" {
-// 		parsedArguments["Name"] = "all"
-// 	}
+	err := event.DeferUpdateMessage()
 
-// 	sqsMessage := util.Object{
-// 		Token:         interaction.Token,
-// 		Command:       "browse",
-// 		GuildID:       interaction.GuildID,
-// 		ApplicationID: interaction.AppID,
-// 		Data:          parsedArguments["Name"],
-// 	}
-// 	sqsMessageData, _ := json.Marshal(sqsMessage)
-// 	err = util.PublishObject("browseReceiver", string(sqsMessageData))
-// 	if err != nil {
-// 		fmt.Printf("Encountered an error while processing the browse command: %v\n", err)
-// 		return err
-// 	}
+	if err != nil {
+		slog.Error("Error deferring: ", slog.Any("err", err))
+		return
+	}
+	var browser browserTracker
 
-// 	data, _ := json.Marshal(response)
-// 	fmt.Printf("Responding with %s\n", string(data))
-// 	_, err = util.SendRequest("PATCH", interaction.AppID, interaction.Token, util.WEBHOOK, data)
-// 	return err
-// }
+	err = browser.Unmarshal([]byte(event.Data.CustomID()))
+	if err != nil {
+		fmt.Printf("Error unmarshalling browser data: %v\n", err)
+		return
+	}
 
-func getActionRow(browser browserTracker) *[]discordgo.MessageComponent {
+	posts := util.DisplayRedditSubreddit(browser.SubReddit)
+	embed := util.DisplayRedditPost(posts[browser.Page].ID, true)[0]
+
+	_, err = event.Client().Rest.UpdateInteractionResponse(event.ApplicationID(), event.Token(), discord.MessageUpdate{
+		Embeds:     &[]discord.Embed{embed},
+		Components: getActionRow(browser),
+	})
+	if err != nil {
+		slog.Error("Error editing the response:", slog.Any("err", err))
+	}
+}
+
+func getActionRow(browser browserTracker) *[]discord.LayoutComponent {
 	prevBrowser := browserTracker{
 		UserId:    browser.UserId,
 		SubReddit: browser.SubReddit,
@@ -142,14 +141,14 @@ func getActionRow(browser browserTracker) *[]discordgo.MessageComponent {
 	bdataPrev := prevBrowser.Marshal()
 	bdataNext := nextBrowser.Marshal()
 
-	return &[]discordgo.MessageComponent{
-		discordgo.ActionsRow{
-			Components: []discordgo.MessageComponent{
-				discordgo.Button{
+	return &[]discord.LayoutComponent{
+		discord.ActionRowComponent{
+			Components: []discord.InteractiveComponent{
+				discord.ButtonComponent{
 					CustomID: bdataPrev,
 					Label:    "Previous",
 				},
-				discordgo.Button{
+				discord.ButtonComponent{
 					CustomID: bdataNext,
 					Label:    "Next",
 				},

@@ -2,13 +2,20 @@ package speak
 
 import (
 	"context"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"strconv"
 	"time"
 
+	"github.com/disgoorg/disgo/bot"
+	"github.com/disgoorg/disgo/discord"
+	"github.com/disgoorg/disgo/events"
+	"github.com/disgoorg/disgo/voice"
+	"github.com/disgoorg/snowflake/v2"
 	"github.com/jonas747/dca"
 	"github.com/stollenaar/aws-rotating-credentials-provider/credentials/filecreds"
 	"github.com/stollenaar/copypastabotv2/internal/commands/chat"
@@ -28,13 +35,23 @@ type Queue struct {
 	userID    string
 }
 
+type SpeakCommand struct {
+	Name        string
+	Description string
+}
+
 var (
 	pollyClient *polly.Client
 
 	queue  []*Queue
 	stream *dca.StreamingSession
 
-	guildVC map[string]*discordgo.VoiceConnection
+	guildVC map[string]*voice.Conn
+
+	SpeakCmd = SpeakCommand{
+		Name:        "speak",
+		Description: "Listen to the beauty of the bot",
+	}
 )
 
 func init() {
@@ -54,57 +71,39 @@ func init() {
 		pollyClient = polly.NewFromConfig(cfg)
 	}
 
-	guildVC = make(map[string]*discordgo.VoiceConnection)
+	guildVC = make(map[string]*voice.Conn)
 }
 
-func Handler(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
-	bot.InteractionRespond(interaction.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: "Loading...",
-		},
-	})
+func (s SpeakCommand) Handler(event *events.ApplicationCommandInteractionCreate) {
+	err := event.DeferCreateMessage(util.ConfigFile.SetEphemeral() == discord.MessageFlagEphemeral)
 
-	var response discordgo.WebhookEdit
+	if err != nil {
+		slog.Error("Error deferring: ", slog.Any("err", err))
+		return
+	}
 
-	parsedArguments := util.ParseArguments([]string{"redditpost", "url", "user", "chat"}, interaction.ApplicationCommandData().Options)
-	if parsedArguments["Redditpost"] == "" && parsedArguments["Url"] == "" && parsedArguments["User"] == "" && parsedArguments["Chat"] == "" {
-		response.Content = aws.String("You must provide at least 1 argument")
-		bot.InteractionResponseEdit(interaction.Interaction, &response)
+	sub := event.SlashCommandInteractionData()
+
+	if len(sub.Options) == 0 {
+		_, err = event.Client().Rest.UpdateInteractionResponse(event.ApplicationID(), event.Token(), discord.MessageUpdate{
+			Content: util.Pointer("You must provide at least 1 argument"),
+		})
+		if err != nil {
+			slog.Error("Error editing the response:", slog.Any("err", err))
+		}
 		return
 	}
 
 	speakObject := util.Object{
-		Token:         interaction.Token,
-		Command:       interaction.ApplicationCommandData().Name,
-		GuildID:       interaction.GuildID,
-		ApplicationID: interaction.AppID,
+		Token:         event.Token(),
+		Command:       event.Data.CommandName(),
+		GuildID:       event.GuildID().String(),
+		ApplicationID: event.ApplicationID().String(),
 	}
 
-	if parsedArguments["User"] == "" {
-
-		if parsedArguments["Redditpost"] != "" {
-			speakObject.Data = parsedArguments["Redditpost"]
-			speakObject.Type = "redditpost"
-		} else if parsedArguments["Url"] != "" {
-			speakObject.Type = "url"
-			speakObject.Data = markov.HandleURL(parsedArguments["Url"])
-		} else if parsedArguments["Chat"] != "" {
-			speakObject.Type = "chat"
-
-			data, err := chat.GetChatGPTResponse("speak", parsedArguments["Chat"], interaction.Member.User.ID)
-			if err != nil {
-				fmt.Println(fmt.Errorf("error interacting with chatgpt char: %e", err))
-				response.Content = aws.String("If you see this, and error likely happened. Whoops")
-				bot.InteractionResponseEdit(interaction.Interaction, &response)
-				return
-			}
-			speakObject.Data = data.Response
-		}
-
-	} else {
+	if user, ok := sub.Options["user"]; ok {
 		speakObject.Type = "user"
-		speakObject.Data = parsedArguments["User"]
+		speakObject.Data = user.Snowflake().String()
 		resp, err := util.ConfigFile.SendStatsBotRequest(speakObject)
 		speakObject.Data = resp.Data
 
@@ -112,12 +111,45 @@ func Handler(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
 			fmt.Printf("Encountered an error while processing the speak command: %v\n", err)
 			return
 		}
+
+	} else if redditPost, ok := sub.Options["redditpost"]; ok {
+		speakObject.Data = redditPost.String()
+		speakObject.Type = "redditpost"
+	} else if url, ok := sub.Options["url"]; ok {
+		speakObject.Data = markov.HandleURL(url.String())
+		speakObject.Type = "url"
+	} else if message, ok := sub.Options["chat"]; ok {
+		speakObject.Type = "chat"
+
+		data, err := chat.GetChatGPTResponse("speak", message.String(), event.User().ID.String())
+		if err != nil {
+			fmt.Println(fmt.Errorf("error interacting with chatgpt char: %e", err))
+			_, err = event.Client().Rest.UpdateInteractionResponse(event.ApplicationID(), event.Token(), discord.MessageUpdate{
+				Content: util.Pointer("If you see this, and error likely happened. Whoops"),
+			})
+			if err != nil {
+				slog.Error("Error editing the response:", slog.Any("err", err))
+			}
+			return
+		}
+		speakObject.Data = data.Response
 	}
-	synthData(speakObject, interaction.Member.User.ID, bot)
+
+	synthData(speakObject, event.User().ID.String(), event.Client())
+}
+
+func (s SpeakCommand) CreateCommandArguments() []discord.ApplicationCommandOption {
+	return []discord.ApplicationCommandOption{
+		discord.ApplicationCommandOptionString{
+			Name:        "subreddit",
+			Description: "subreddit",
+			Required:    true,
+		},
+	}
 }
 
 // Command create a tts experience for the generated markov
-func synthData(object util.Object, userID string, bot *discordgo.Session) {
+func synthData(object util.Object, userID string, bot *bot.Client) {
 
 	if object.Type == "redditpost" {
 		post := util.GetRedditPost(object.Data)
@@ -169,7 +201,7 @@ func synthData(object util.Object, userID string, bot *discordgo.Session) {
 	doSpeech(bot)
 }
 
-func doSpeech(bot *discordgo.Session) {
+func doSpeech(bot *bot.Client) {
 	if len(queue) == 0 {
 		fmt.Println("Queue is empty")
 		return
@@ -186,9 +218,9 @@ func doSpeech(bot *discordgo.Session) {
 		util.SendRequest("PATCH", currentSpeech.sqsObject.ApplicationID, currentSpeech.sqsObject.Token, util.WEBHOOK, data)
 		defer util.SendRequest("DELETE", currentSpeech.sqsObject.ApplicationID, currentSpeech.sqsObject.Token, util.WEBHOOK, data)
 	}
-	vs, err := bot.State.VoiceState(currentSpeech.sqsObject.GuildID, currentSpeech.userID)
-	if err != nil {
-		fmt.Println(fmt.Errorf("error finding voice state: %v", err))
+
+	vs, found := bot.Caches.VoiceState(snowflake.MustParse(currentSpeech.sqsObject.GuildID), snowflake.MustParse(currentSpeech.userID))
+	if !found {
 		if len(queue) > 0 {
 			doSpeech(bot)
 		} else {
@@ -204,17 +236,18 @@ func doSpeech(bot *discordgo.Session) {
 
 	// Send the buffer data.
 	stream := currentSpeech.synthed.AudioStream
+	conn := bot.VoiceManager.CreateConn(snowflake.MustParse(currentSpeech.sqsObject.GuildID))
 
-	vc, err := bot.ChannelVoiceJoin(currentSpeech.sqsObject.GuildID, vs.ChannelID, false, false)
+	err := conn.Open(context.TODO(), *vs.ChannelID, false, false)
 	if len(queue) == 0 {
-		defer vc.Disconnect()
+		defer conn.Close(context.TODO())
 	}
 
 	if err != nil {
 		fmt.Println(fmt.Errorf("error joining voice channel: %v", err))
 	}
-	guildVC[currentSpeech.sqsObject.GuildID] = vc
-	err = vc.Speaking(true)
+	guildVC[currentSpeech.sqsObject.GuildID] = &conn
+	err = conn.SetSpeaking(context.TODO(), voice.SpeakingFlagMicrophone)
 	if err != nil {
 		fmt.Println(fmt.Errorf("error setting speaking to true: %v", err))
 	}
@@ -235,19 +268,15 @@ func doSpeech(bot *discordgo.Session) {
 		fmt.Println(fmt.Errorf("error dca encoding file: %v", err))
 	}
 
-	done := make(chan error)
-	dca.NewStream(encodeSession, vc, done)
-	err = <-done
-	if err != nil && err != io.EOF {
-		fmt.Println(fmt.Errorf("stream error: %v", err))
-	}
-
+	writeOpus(encodeSession, conn.UDP())
 	// Make sure everything is cleaned up, that for example the encoding process if any issues happened isnt lingering around
-	encodeSession.Cleanup()
 	os.Remove("/tmp/tmp.mp3")
 
 	// Stop speaking
-	vc.Speaking(false)
+	err = conn.SetSpeaking(context.TODO(), voice.SpeakingFlagNone)
+	if err != nil {
+		fmt.Println(fmt.Errorf("error setting speaking to false: %v", err))
+	}
 
 	// Sleep for a specificed amount of time before ending.
 	time.Sleep(250 * time.Millisecond)
@@ -257,5 +286,27 @@ func doSpeech(bot *discordgo.Session) {
 	} else {
 		guildVC[currentSpeech.sqsObject.GuildID] = nil
 	}
-	return
+}
+
+
+func writeOpus(encodeSession *dca.EncodeSession, w io.Writer) {
+	defer 	encodeSession.Cleanup()
+
+	ticker := time.NewTicker(time.Millisecond * 20)
+	defer ticker.Stop()
+
+	var frameLen int16
+	// Don't wait for the first tick, run immediately.
+	for ; true; <-ticker.C {
+		err := binary.Read(encodeSession, binary.LittleEndian, &frameLen)
+		if err != nil {
+			panic("error reading file: " + err.Error())
+		}
+
+		// Copy the frame.
+		_, err = io.CopyN(w, encodeSession, int64(frameLen))
+		if err != nil && err != io.EOF {
+			return
+		}
+	}
 }
