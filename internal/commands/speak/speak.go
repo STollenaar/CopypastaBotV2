@@ -141,9 +141,24 @@ func (s SpeakCommand) Handler(event *events.ApplicationCommandInteractionCreate)
 func (s SpeakCommand) CreateCommandArguments() []discord.ApplicationCommandOption {
 	return []discord.ApplicationCommandOption{
 		discord.ApplicationCommandOptionString{
-			Name:        "subreddit",
-			Description: "subreddit",
-			Required:    true,
+			Name:        "url",
+			Description: "URL of the page to make a markov chain from",
+			Required:    false,
+		},
+		discord.ApplicationCommandOptionUser{
+			Name:        "user",
+			Description: "User to create a markov chain of",
+			Required:    false,
+		},
+		discord.ApplicationCommandOptionString{
+			Name:        "redditpost",
+			Description: "Reddit post ID",
+			Required:    false,
+		},
+		discord.ApplicationCommandOptionString{
+			Name:        "chat",
+			Description: "Chat message for the copypastabot",
+			Required:    false,
 		},
 	}
 }
