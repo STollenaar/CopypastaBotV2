@@ -12,8 +12,8 @@ resource "helm_release" "github_arc_runner_copypastabot" {
 
 resource "kubernetes_role_binding" "github_arc_admin" {
   metadata {
-    name      = "namespace-admin-binding"
-    namespace = kubernetes_namespace.copypastabot.metadata.0.name
+    name      = "namespace-arc-copypastabot-admin-binding"
+    namespace = data.terraform_remote_state.kubernetes_cluster.outputs.discordbots.namespace.metadata.0.name
   }
 
   role_ref {
