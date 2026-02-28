@@ -22,8 +22,8 @@ var (
 	systemInsult string
 
 	ChatCmd = ChatCommand{
-		Name:        "chat",
-		Description: "Chat with the bot",
+		Name:            "chat",
+		Description:     "Chat with the bot",
 		MessageCommands: []string{"caveman", "insult", "respond"},
 	}
 )

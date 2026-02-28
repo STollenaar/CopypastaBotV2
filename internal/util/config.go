@@ -106,8 +106,6 @@ func init() {
 		}
 	}
 
-	err = nil
-
 	ConfigFile = &Config{
 		DISCORD_TOKEN:                      os.Getenv("DISCORD_TOKEN"),
 		DISCORD_CHANNEL_ID:                 os.Getenv("DISCORD_CHANNEL_ID"),
@@ -339,7 +337,11 @@ func (c *Config) SendStatsBotRequest(sqsObject Object) (Object, error) {
 	}
 	body, _ := io.ReadAll(res.Body)
 	var object Object
-	json.Unmarshal(body, &object)
+	err = json.Unmarshal(body, &object)
+	if err != nil {
+		slog.Error("Error unmarshaling", slog.Any("err", err))
+	}
+
 	slog.Debug("Response body", slog.String("body", string(body)))
 	return object, err
 }

@@ -54,7 +54,11 @@ func CreateOllamaGeneration(prompt OllamaGenerateRequest) (OllamaGenerateRespons
 	var bodyData string
 	if resp != nil {
 		buf := new(bytes.Buffer)
-		buf.ReadFrom(resp.Body)
+		_, err := buf.ReadFrom(resp.Body)
+		if err != nil {
+			slog.Error("Error reading body", slog.Any("err", err))
+		}
+
 		bodyData = buf.String()
 	}
 	if resp.StatusCode != 200 {
@@ -63,6 +67,10 @@ func CreateOllamaGeneration(prompt OllamaGenerateRequest) (OllamaGenerateRespons
 	}
 
 	var r OllamaGenerateResponse
-	json.Unmarshal([]byte(bodyData), &r)
+	err = json.Unmarshal([]byte(bodyData), &r)
+	if err != nil {
+		slog.Error("Error unmarshaling", slog.Any("err", err))
+	}
+
 	return r, nil
 }

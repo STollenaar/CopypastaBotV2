@@ -82,15 +82,25 @@ func startHealthServer(port string) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("ok"))
+		_, err := w.Write([]byte("ok"))
+		if err != nil {
+			slog.Error("Error writing ok", slog.Any("err", err.Error()))
+		}
 	})
 	mux.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
 		if gatewayReady.Load() {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("ok"))
+			_, err := w.Write([]byte("ok"))
+			if err != nil {
+				slog.Error("Error writing ok", slog.Any("err", err.Error()))
+			}
 		} else {
 			w.WriteHeader(http.StatusServiceUnavailable)
-			w.Write([]byte("not ready"))
+			_, err := w.Write([]byte("not ready"))
+			if err != nil {
+				slog.Error("Error writing ready", slog.Any("err", err.Error()))
+			}
+
 		}
 	})
 	slog.Info("Health server listening", slog.String("port", port))

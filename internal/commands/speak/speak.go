@@ -71,9 +71,9 @@ func init() {
 		pollyClient = polly.NewFromConfig(cfg)
 	}
 
-	queues      = make(map[string][]*Queue)
+	queues = make(map[string][]*Queue)
 	guildActive = make(map[string]bool)
-	guildVC     = make(map[string]*voice.Conn)
+	guildVC = make(map[string]*voice.Conn)
 }
 
 func (s SpeakCommand) Handler(event *events.ApplicationCommandInteractionCreate) {
@@ -253,8 +253,16 @@ func doSpeech(guildID string, bot *bot.Client) {
 	}
 	data, _ := json.Marshal(response)
 	if _, snerr := strconv.Atoi(currentSpeech.sqsObject.Token); snerr != nil {
-		util.SendRequest("PATCH", currentSpeech.sqsObject.ApplicationID, currentSpeech.sqsObject.Token, util.WEBHOOK, data)
-		defer util.SendRequest("DELETE", currentSpeech.sqsObject.ApplicationID, currentSpeech.sqsObject.Token, util.WEBHOOK, data)
+		_, err := util.SendRequest("PATCH", currentSpeech.sqsObject.ApplicationID, currentSpeech.sqsObject.Token, util.WEBHOOK, data)
+		if err != nil {
+			slog.Error("Error sending patch", slog.Any("err", err))
+		}
+		defer func() {
+			_, err := util.SendRequest("DELETE", currentSpeech.sqsObject.ApplicationID, currentSpeech.sqsObject.Token, util.WEBHOOK, data)
+			if err != nil {
+				slog.Error("Error sending delete", slog.Any("err", err))
+			}
+		}()
 	}
 
 	vs, found := bot.Caches.VoiceState(snowflake.MustParse(guildID), snowflake.MustParse(currentSpeech.userID))
@@ -297,7 +305,12 @@ func doSpeech(guildID string, bot *bot.Client) {
 	if err != nil {
 		slog.Error("Error creating temp mp3 file", slog.Any("err", err))
 	}
-	defer outFile.Close()
+	defer func() {
+		err := outFile.Close()
+		if err != nil {
+			slog.Error("Error closing tmp file", slog.Any("err", err))
+		}
+	}()
 
 	_, err = io.Copy(outFile, stream)
 	if err != nil {
@@ -311,7 +324,10 @@ func doSpeech(guildID string, bot *bot.Client) {
 
 	writeOpus(encodeSession, conn.UDP())
 	// Make sure everything is cleaned up.
-	os.Remove(outFile.Name())
+	err = os.Remove(outFile.Name())
+	if err != nil {
+		slog.Error("Error removing file", slog.Any("err", err))
+	}
 
 	if currentSpeech.isLastChunk {
 		if err := database.SetSpeakItemStatus(currentSpeech.dbID, "done"); err != nil {

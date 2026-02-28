@@ -61,10 +61,14 @@ func GetMessageObject(object Object) (discord.Message, error) {
 	var bodyString string
 	if resp != nil {
 		buf := new(bytes.Buffer)
-		buf.ReadFrom(resp.Body)
+		_, err := buf.ReadFrom(resp.Body)
+		if err != nil {
+			slog.Error("Error reading body", slog.Any("err", err))
+		}
+
 		bodyData := buf.String()
 
-		bodyString = string(bodyData)
+		bodyString = bodyData
 		slog.Debug("HTTP response", slog.Any("response", resp), slog.String("body", bodyString))
 	}
 	if err != nil {

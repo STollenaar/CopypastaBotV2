@@ -11,13 +11,13 @@ import (
 
 var (
 	MarkovCmd = MarkovCommand{
-		Name: "markov",
+		Name:        "markov",
 		Description: "Imitate someone or from a reddit post with some weird results",
 	}
 )
 
 type MarkovCommand struct {
-	Name string
+	Name        string
 	Description string
 }
 

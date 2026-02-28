@@ -1,4 +1,4 @@
-// package speakinterrupt
+package speakinterrupt
 
 // import (
 // 	"encoding/json"
@@ -38,7 +38,6 @@
 // 		log.Fatalf("error creating session websocket: %v", err)
 // 	}
 // }
-
 
 // func handler() error {
 // 	guildChannels := checkVCs()

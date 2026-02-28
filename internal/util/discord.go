@@ -36,7 +36,10 @@ func SendError(sqsObject Object) {
 	if err != nil {
 		slog.Error("Error marshalling error response", slog.Any("err", err))
 	}
-	SendRequest("PATCH", sqsObject.ApplicationID, sqsObject.Token, WEBHOOK, data)
+	_, err = SendRequest("PATCH", sqsObject.ApplicationID, sqsObject.Token, WEBHOOK, data)
+	if err != nil {
+		slog.Error("Error sending patch", slog.Any("err", err))
+	}
 }
 
 func SendRequest(method, interactionID, interactionToken string, kind KIND, data []byte, messageID ...string) (*http.Response, error) {

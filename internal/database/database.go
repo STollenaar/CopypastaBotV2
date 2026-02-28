@@ -24,10 +24,6 @@ var (
 	changeLogFiles embed.FS
 )
 
-func Exit() {
-	duckdbClient.Close()
-}
-
 func init() {
 
 	var err error
@@ -178,7 +174,12 @@ func GetPendingSpeakItems() ([]QueueRecord, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get pending speak items: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		err := rows.Close()
+		if err != nil {
+			slog.Error("Error closing rows", slog.Any("err", err))
+		}
+	}()
 
 	var items []QueueRecord
 	for rows.Next() {

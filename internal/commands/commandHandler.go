@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"log/slog"
 	"reflect"
 
 	"github.com/disgoorg/disgo/discord"
@@ -79,8 +80,9 @@ func init() {
 
 // PingCommand sends back the pong
 func PingCommand(event *events.ApplicationCommandInteractionCreate) {
-	event.CreateMessage(discord.MessageCreate{
+	err := event.CreateMessage(discord.MessageCreate{
 		Content: "Pong",
 		Flags:   util.ConfigFile.SetEphemeral(),
 	})
+	slog.Error("Error sending pong", slog.Any("err", err.Error()))
 }

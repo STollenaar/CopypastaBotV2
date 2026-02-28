@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"log"
+	"net/http"
 	"os"
 	"strings"
 
@@ -47,7 +48,18 @@ func (m *markov) ReadFile(filePath string) string {
 
 func (m *markov) ReadURL(URL string) (string, error) {
 	// Open web page
-	doc, err := goquery.NewDocument(URL)
+	res, err := http.Get(URL)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func() {
+		err := res.Body.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	doc, err := goquery.NewDocumentFromReader(res.Body)
 	if err != nil {
 		log.Fatal(err)
 	}
