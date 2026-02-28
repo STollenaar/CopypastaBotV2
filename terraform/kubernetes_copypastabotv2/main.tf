@@ -66,6 +66,16 @@ resource "kubernetes_deployment" "copypastabot" {
               value = env.value
             }
           }
+          volume_mount {
+            name       = data.terraform_remote_state.kubernetes.outputs.persistent_volume_claim.metadata.0.name
+            mount_path = "/duckdb"
+          }
+        }
+        volume {
+          name = data.terraform_remote_state.kubernetes.outputs.persistent_volume_claim.metadata.0.name
+          persistent_volume_claim {
+            claim_name = data.terraform_remote_state.kubernetes.outputs.persistent_volume_claim.metadata.0.name
+          }
         }
       }
     }
