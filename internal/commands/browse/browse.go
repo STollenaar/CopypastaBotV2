@@ -103,7 +103,7 @@ func (b BrowseCommand) ComponentHandler(event *events.ComponentInteractionCreate
 
 	err = browser.Unmarshal([]byte(event.Data.CustomID()))
 	if err != nil {
-		fmt.Printf("Error unmarshalling browser data: %v\n", err)
+		slog.Error("Error unmarshalling browser data", slog.Any("err", err))
 		return
 	}
 

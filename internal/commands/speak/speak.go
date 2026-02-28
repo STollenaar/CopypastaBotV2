@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/json"
-	"fmt"
 	"io"
 	"log/slog"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/disgoorg/disgo/bot"
@@ -20,19 +20,21 @@ import (
 	"github.com/stollenaar/aws-rotating-credentials-provider/credentials/filecreds"
 	"github.com/stollenaar/copypastabotv2/internal/commands/chat"
 	"github.com/stollenaar/copypastabotv2/internal/commands/markov"
+	"github.com/stollenaar/copypastabotv2/internal/database"
 	"github.com/stollenaar/copypastabotv2/internal/util"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/polly"
 	"github.com/aws/aws-sdk-go-v2/service/polly/types"
-	"github.com/bwmarrin/discordgo"
 )
 
 type Queue struct {
-	synthed   *polly.SynthesizeSpeechOutput
-	sqsObject util.Object
-	userID    string
+	synthed     *polly.SynthesizeSpeechOutput
+	sqsObject   util.Object
+	userID      string
+	dbID        int64
+	isLastChunk bool
 }
 
 type SpeakCommand struct {
@@ -43,10 +45,10 @@ type SpeakCommand struct {
 var (
 	pollyClient *polly.Client
 
-	queue  []*Queue
-	stream *dca.StreamingSession
-
-	guildVC map[string]*voice.Conn
+	mu          sync.Mutex
+	queues      map[string][]*Queue    // per-guild queue
+	guildActive map[string]bool        // per-guild "playback in progress" flag
+	guildVC     map[string]*voice.Conn // per-guild active voice connection
 
 	SpeakCmd = SpeakCommand{
 		Name:        "speak",
@@ -62,21 +64,20 @@ func init() {
 			Region:      os.Getenv("AWS_REGION"),
 		})
 	} else {
-		// Create a config with the credentials provider.
 		cfg, err := config.LoadDefaultConfig(context.TODO())
-
 		if err != nil {
 			panic("configuration error, " + err.Error())
 		}
 		pollyClient = polly.NewFromConfig(cfg)
 	}
 
-	guildVC = make(map[string]*voice.Conn)
+	queues      = make(map[string][]*Queue)
+	guildActive = make(map[string]bool)
+	guildVC     = make(map[string]*voice.Conn)
 }
 
 func (s SpeakCommand) Handler(event *events.ApplicationCommandInteractionCreate) {
 	err := event.DeferCreateMessage(util.ConfigFile.SetEphemeral() == discord.MessageFlagEphemeral)
-
 	if err != nil {
 		slog.Error("Error deferring: ", slog.Any("err", err))
 		return
@@ -106,12 +107,10 @@ func (s SpeakCommand) Handler(event *events.ApplicationCommandInteractionCreate)
 		speakObject.Data = user.Snowflake().String()
 		resp, err := util.ConfigFile.SendStatsBotRequest(speakObject)
 		speakObject.Data = resp.Data
-
 		if err != nil {
-			fmt.Printf("Encountered an error while processing the speak command: %v\n", err)
+			slog.Error("Encountered an error while processing the speak command", slog.Any("err", err))
 			return
 		}
-
 	} else if redditPost, ok := sub.Options["redditpost"]; ok {
 		speakObject.Data = redditPost.String()
 		speakObject.Type = "redditpost"
@@ -120,10 +119,9 @@ func (s SpeakCommand) Handler(event *events.ApplicationCommandInteractionCreate)
 		speakObject.Type = "url"
 	} else if message, ok := sub.Options["chat"]; ok {
 		speakObject.Type = "chat"
-
 		data, err := chat.GetChatGPTResponse("speak", message.String(), event.User().ID.String())
 		if err != nil {
-			fmt.Println(fmt.Errorf("error interacting with chatgpt char: %e", err))
+			slog.Error("Error interacting with chatgpt", slog.Any("err", err))
 			_, err = event.Client().Rest.UpdateInteractionResponse(event.ApplicationID(), event.Token(), discord.MessageUpdate{
 				Content: util.Pointer("If you see this, and error likely happened. Whoops"),
 			})
@@ -163,21 +161,34 @@ func (s SpeakCommand) CreateCommandArguments() []discord.ApplicationCommandOptio
 	}
 }
 
-// Command create a tts experience for the generated markov
+// synthData synthesizes all content chunks via Polly, appends them to the
+// per-guild queue, and starts playback if the guild is not already active.
 func synthData(object util.Object, userID string, bot *bot.Client) {
-
 	if object.Type == "redditpost" {
 		post := util.GetRedditPost(object.Data)
 		object.Data = post.Post.Body
 	}
 
+	dbID, err := database.EnqueueSpeakItem(database.QueueRecord{
+		GuildID: object.GuildID,
+		UserID:  userID,
+		Content: object.Data,
+		CmdType: object.Type,
+		CmdName: object.Command,
+		AppID:   object.ApplicationID,
+		Token:   object.Token,
+	})
+	if err != nil {
+		slog.Error("Error persisting speak item to DB", slog.Any("err", err))
+	}
+
 	contents := util.BreakContent(object.Data, 2950)
-	for _, content := range contents {
+	for i, content := range contents {
 		resp, err := util.WrapIntoSSML(content, "system")
 		textType := types.TextTypeText
 		engine := types.EngineNeural
 		if err != nil {
-			fmt.Println(err)
+			slog.Error("Error wrapping into SSML", slog.Any("err", err))
 		} else {
 			content = resp.Choices[0].Message.Content
 			// if !strings.Contains(content, "<speak>") {
@@ -186,7 +197,7 @@ func synthData(object util.Object, userID string, bot *bot.Client) {
 			textType = types.TextTypeSsml
 			engine = types.EngineStandard
 		}
-		fmt.Printf("Content to be synthesized: %s\n", content)
+		slog.Debug("Content to be synthesized", slog.String("content", content))
 		synthed, err := pollyClient.SynthesizeSpeech(context.TODO(), &polly.SynthesizeSpeechInput{
 			Text:         aws.String(content),
 			TextType:     textType,
@@ -195,37 +206,49 @@ func synthData(object util.Object, userID string, bot *bot.Client) {
 			VoiceId:      types.VoiceIdMatthew,
 			LanguageCode: types.LanguageCodeEnUs,
 		})
-
 		if err != nil {
-			fmt.Printf("error synthesizing content: %v", err)
+			slog.Error("Error synthesizing content", slog.Any("err", err))
 			continue
 		}
-		queue = append(queue, &Queue{
-			synthed:   synthed,
-			userID:    userID,
-			sqsObject: object,
+
+		mu.Lock()
+		queues[object.GuildID] = append(queues[object.GuildID], &Queue{
+			synthed:     synthed,
+			userID:      userID,
+			sqsObject:   object,
+			dbID:        dbID,
+			isLastChunk: i == len(contents)-1,
 		})
-	}
-	if stream != nil {
-		if finished, _ := stream.Finished(); !finished {
-			fmt.Println("stream is not finished and not null")
-			return
-		}
+		mu.Unlock()
 	}
 
-	doSpeech(bot)
+	// Atomically check-and-set the active flag so only one goroutine starts doSpeech per guild.
+	mu.Lock()
+	shouldStart := !guildActive[object.GuildID]
+	if shouldStart {
+		guildActive[object.GuildID] = true
+	}
+	mu.Unlock()
+
+	if shouldStart {
+		doSpeech(object.GuildID, bot)
+	}
 }
 
-func doSpeech(bot *bot.Client) {
-	if len(queue) == 0 {
-		fmt.Println("Queue is empty")
+func doSpeech(guildID string, bot *bot.Client) {
+	mu.Lock()
+	if len(queues[guildID]) == 0 {
+		guildActive[guildID] = false
+		mu.Unlock()
+		slog.Debug("Queue is empty", slog.String("guild_id", guildID))
 		return
 	}
-	currentSpeech := queue[0]
-	queue = queue[1:]
+	currentSpeech := queues[guildID][0]
+	queues[guildID] = queues[guildID][1:]
+	mu.Unlock()
 
 	d := "Playing now"
-	response := discordgo.WebhookEdit{
+	response := discord.MessageUpdate{
 		Content: &d,
 	}
 	data, _ := json.Marshal(response)
@@ -234,78 +257,104 @@ func doSpeech(bot *bot.Client) {
 		defer util.SendRequest("DELETE", currentSpeech.sqsObject.ApplicationID, currentSpeech.sqsObject.Token, util.WEBHOOK, data)
 	}
 
-	vs, found := bot.Caches.VoiceState(snowflake.MustParse(currentSpeech.sqsObject.GuildID), snowflake.MustParse(currentSpeech.userID))
+	vs, found := bot.Caches.VoiceState(snowflake.MustParse(guildID), snowflake.MustParse(currentSpeech.userID))
 	if !found {
-		if len(queue) > 0 {
-			doSpeech(bot)
-		} else {
-			guildVC[currentSpeech.sqsObject.GuildID] = nil
-		}
+		// User left the VC; skip this item and try the next one.
+		doSpeech(guildID, bot)
 		return
 	}
 
-	// Sleep for a specified amount of time before playing the sound
+	// Sleep for a specified amount of time before playing the sound.
 	time.Sleep(250 * time.Millisecond)
 
-	// Start speaking.
-
-	// Send the buffer data.
 	stream := currentSpeech.synthed.AudioStream
-	conn := bot.VoiceManager.CreateConn(snowflake.MustParse(currentSpeech.sqsObject.GuildID))
+	conn := bot.VoiceManager.CreateConn(snowflake.MustParse(guildID))
 
 	err := conn.Open(context.TODO(), *vs.ChannelID, false, false)
-	if len(queue) == 0 {
+
+	// Stay connected between items; disconnect only when the queue is drained.
+	mu.Lock()
+	hasMore := len(queues[guildID]) > 0
+	mu.Unlock()
+	if !hasMore {
 		defer conn.Close(context.TODO())
 	}
 
 	if err != nil {
-		fmt.Println(fmt.Errorf("error joining voice channel: %v", err))
+		slog.Error("Error joining voice channel", slog.Any("err", err))
 	}
-	guildVC[currentSpeech.sqsObject.GuildID] = &conn
+
+	mu.Lock()
+	guildVC[guildID] = &conn
+	mu.Unlock()
+
 	err = conn.SetSpeaking(context.TODO(), voice.SpeakingFlagMicrophone)
 	if err != nil {
-		fmt.Println(fmt.Errorf("error setting speaking to true: %v", err))
+		slog.Error("Error setting speaking to true", slog.Any("err", err))
 	}
-	// write the whole body at once
-	outFile, err := os.Create("/tmp/tmp.mp3")
+
+	outFile, err := os.CreateTemp("/tmp", "*.mp3")
 	if err != nil {
-		fmt.Println(fmt.Errorf("error creating tmp mp3 file: %v", err))
+		slog.Error("Error creating temp mp3 file", slog.Any("err", err))
 	}
 	defer outFile.Close()
-	// handle err
+
 	_, err = io.Copy(outFile, stream)
 	if err != nil {
-		fmt.Println(fmt.Errorf("error copying stream to tmp file: %v", err))
+		slog.Error("Error copying stream to temp file", slog.Any("err", err))
 	}
-	// Encoding a file and saving it to disk
-	encodeSession, err := dca.EncodeFile("/tmp/tmp.mp3", dca.StdEncodeOptions)
+
+	encodeSession, err := dca.EncodeFile(outFile.Name(), dca.StdEncodeOptions)
 	if err != nil {
-		fmt.Println(fmt.Errorf("error dca encoding file: %v", err))
+		slog.Error("Error DCA encoding file", slog.Any("err", err))
 	}
 
 	writeOpus(encodeSession, conn.UDP())
-	// Make sure everything is cleaned up, that for example the encoding process if any issues happened isnt lingering around
-	os.Remove("/tmp/tmp.mp3")
+	// Make sure everything is cleaned up.
+	os.Remove(outFile.Name())
 
-	// Stop speaking
-	err = conn.SetSpeaking(context.TODO(), voice.SpeakingFlagNone)
-	if err != nil {
-		fmt.Println(fmt.Errorf("error setting speaking to false: %v", err))
+	if currentSpeech.isLastChunk {
+		if err := database.SetSpeakItemStatus(currentSpeech.dbID, "done"); err != nil {
+			slog.Error("Error marking speak item as done", slog.Any("err", err))
+		}
 	}
 
-	// Sleep for a specificed amount of time before ending.
+	err = conn.SetSpeaking(context.TODO(), voice.SpeakingFlagNone)
+	if err != nil {
+		slog.Error("Error setting speaking to false", slog.Any("err", err))
+	}
+
+	mu.Lock()
+	guildVC[guildID] = nil
+	mu.Unlock()
+
+	// Sleep for a specified amount of time before ending.
 	time.Sleep(250 * time.Millisecond)
 
-	if len(queue) > 0 {
-		doSpeech(bot)
-	} else {
-		guildVC[currentSpeech.sqsObject.GuildID] = nil
+	doSpeech(guildID, bot)
+}
+
+// Reenqueue re-processes speak queue items loaded from the DB on startup.
+// It marks each old record done first to prevent double-replay on the next restart.
+func Reenqueue(items []database.QueueRecord, bot *bot.Client) {
+	for _, item := range items {
+		if err := database.SetSpeakItemStatus(item.ID, "done"); err != nil {
+			slog.Error("Error marking stale speak item as done", slog.Any("err", err))
+		}
+		obj := util.Object{
+			Type:          item.CmdType,
+			Command:       item.CmdName,
+			Data:          item.Content,
+			GuildID:       item.GuildID,
+			ApplicationID: item.AppID,
+			Token:         item.Token,
+		}
+		synthData(obj, item.UserID, bot)
 	}
 }
 
-
 func writeOpus(encodeSession *dca.EncodeSession, w io.Writer) {
-	defer 	encodeSession.Cleanup()
+	defer encodeSession.Cleanup()
 
 	ticker := time.NewTicker(time.Millisecond * 20)
 	defer ticker.Stop()

@@ -50,7 +50,7 @@ func (c ChatCommand) Handler(event *events.ApplicationCommandInteractionCreate) 
 	chatRSP, err := GetChatGPTResponse(event.Data.CommandName(), sub.Options["message"].String(), event.User().ID.String())
 
 	if err != nil {
-		fmt.Println(fmt.Errorf("error interacting with chatgpt char: %e", err))
+		slog.Error("Error interacting with chatgpt", slog.Any("err", err))
 		e := "If you see this, and error likely happened. Whoops"
 
 		_, err = event.Client().Rest.UpdateInteractionResponse(event.ApplicationID(), event.Token(), discord.MessageUpdate{
@@ -101,7 +101,7 @@ func (c ChatCommand) MessageCommandHandler(event *events.ApplicationCommandInter
 	chatRSP, err := GetChatGPTResponse(event.Data.CommandName(), event.MessageCommandInteractionData().TargetMessage().Content, event.User().ID.String())
 
 	if err != nil {
-		fmt.Println(fmt.Errorf("error interacting with chatgpt char: %e", err))
+		slog.Error("Error interacting with chatgpt", slog.Any("err", err))
 		e := "If you see this, and error likely happened. Whoops"
 
 		_, err = event.Client().Rest.UpdateInteractionResponse(event.ApplicationID(), event.Token(), discord.MessageUpdate{
@@ -146,7 +146,7 @@ func (c ChatCommand) MessageCommandHandler(event *events.ApplicationCommandInter
 	case "speak":
 
 	default:
-		fmt.Println(fmt.Errorf("unimplemented command: %s", event.Data.CommandName()))
+		slog.Warn("Unimplemented command", slog.String("command", event.Data.CommandName()))
 	}
 }
 
@@ -187,7 +187,10 @@ func GetChatGPTResponse(promptName, message, userID string) (out ChatResponse, e
 	})
 
 	if err != nil {
-		return ChatResponse{}, nil
+		slog.Error("Error generating ollama response", slog.Any("err", err))
+		return ChatResponse{
+			Response: "Generation error happened",
+		}, nil
 	}
 
 	err = json.Unmarshal([]byte(resp.Response), &out)

@@ -1,7 +1,6 @@
 package markov
 
 import (
-	"fmt"
 	"log/slog"
 
 	"github.com/disgoorg/disgo/discord"
@@ -49,7 +48,7 @@ func (m MarkovCommand) Handler(event *events.ApplicationCommandInteractionCreate
 
 		resp, err := util.ConfigFile.SendStatsBotRequest(sqsMessage)
 		if err != nil {
-			fmt.Println(err)
+			slog.Error("Error sending statsbot request", slog.Any("err", err))
 			return
 		}
 		markovData = HandleUser(resp.Data)
@@ -81,7 +80,7 @@ func (m MarkovCommand) CreateCommandArguments() []discord.ApplicationCommandOpti
 func HandleURL(input string) string {
 	data, err := pkgMarkov.GetMarkovURL(input)
 	if err != nil {
-		fmt.Println(err)
+		slog.Error("Error getting markov from URL", slog.Any("err", err))
 		return err.Error()
 	}
 	return data
@@ -90,7 +89,7 @@ func HandleURL(input string) string {
 func HandleUser(input string) string {
 	data, err := pkgMarkov.GetUserMarkov(input)
 	if err != nil {
-		fmt.Println(err)
+		slog.Error("Error getting user markov", slog.Any("err", err))
 		return err.Error()
 	}
 	return data

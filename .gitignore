@@ -20,3 +20,6 @@ terraform/**/.terraform/
 **/bootstrap
 **/main
 vendor/
+copypastabot.db
+copypastabot.db.wal
+TODO.md

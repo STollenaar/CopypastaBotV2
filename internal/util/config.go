@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -57,8 +58,6 @@ type Config struct {
 	STATISTICS_BOT string
 	OPENAI_KEY     string
 
-	DATE_STRING string
-
 	OLLAMA_URL       string
 	OLLAMA_MODEL     string
 	OLLAMA_AUTH_TYPE string
@@ -67,6 +66,9 @@ type Config struct {
 	OLLAMA_AUTH_USERNAME     string
 	AWS_OLLAMA_AUTH_PASSWORD string
 	OLLAMA_AUTH_PASSWORD     string
+
+	DUCKDB_PATH string
+	HEALTH_PORT string
 }
 
 var (
@@ -129,7 +131,6 @@ func init() {
 		TERMINAL_REGEX:                     os.Getenv("TERMINAL_REGEX"),
 		STATISTICS_BOT:                     os.Getenv("STATSBOT_URL"),
 		OPENAI_KEY:                         os.Getenv("OPENAI_KEY"),
-		DATE_STRING:                        os.Getenv("DATE_STRING"),
 		OLLAMA_URL:                         os.Getenv("OLLAMA_URL"),
 		OLLAMA_MODEL:                       os.Getenv("OLLAMA_MODEL"),
 		OLLAMA_AUTH_TYPE:                   os.Getenv("OLLAMA_AUTH_TYPE"),
@@ -137,10 +138,15 @@ func init() {
 		OLLAMA_AUTH_PASSWORD:               os.Getenv("OLLAMA_AUTH_PASSWORD"),
 		AWS_OLLAMA_AUTH_USERNAME:           os.Getenv("AWS_OLLAMA_AUTH_USERNAME"),
 		AWS_OLLAMA_AUTH_PASSWORD:           os.Getenv("AWS_OLLAMA_AUTH_PASSWORD"),
+		DUCKDB_PATH:                        os.Getenv("DUCKDB_PATH"),
+		HEALTH_PORT:                        os.Getenv("HEALTH_PORT"),
 	}
 
 	if ConfigFile.TERMINAL_REGEX == "" {
 		ConfigFile.TERMINAL_REGEX = `(\.|,|:|;|\?|!)$`
+	}
+	if ConfigFile.HEALTH_PORT == "" {
+		ConfigFile.HEALTH_PORT = "8080"
 	}
 
 }
@@ -290,7 +296,7 @@ func getAWSParameter(parameterName string) (string, error) {
 		WithDecryption: aws.Bool(true),
 	})
 	if err != nil {
-		fmt.Println(fmt.Errorf("error from fetching parameter %s. With error: %w", parameterName, err))
+		slog.Error("Error fetching AWS parameter", slog.String("parameter", parameterName), slog.Any("err", err))
 		return "", err
 	}
 	return *out.Parameter.Value, err
@@ -325,7 +331,7 @@ func (c *Config) SendStatsBotRequest(sqsObject Object) (Object, error) {
 		Timeout: 30 * time.Second,
 	}
 
-	fmt.Printf("Doing Request: %v", *req)
+	slog.Debug("Doing request", slog.Any("request", *req))
 
 	res, err := client.Do(req)
 	if err != nil {
@@ -334,7 +340,7 @@ func (c *Config) SendStatsBotRequest(sqsObject Object) (Object, error) {
 	body, _ := io.ReadAll(res.Body)
 	var object Object
 	json.Unmarshal(body, &object)
-	fmt.Printf("Response body: %s\n", string(body))
+	slog.Debug("Response body", slog.String("body", string(body)))
 	return object, err
 }
 

@@ -4,26 +4,32 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/url"
 	"regexp"
 	"strings"
 
-	"github.com/bwmarrin/discordgo"
 	"github.com/disgoorg/disgo/discord"
 	"github.com/vartanbeno/go-reddit/v2/reddit"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 )
 
 var (
 	images       []string
 	videos       []string
 	redditClient *reddit.Client
+
+	re *regexp.Regexp
 )
 
 func init() {
 	images = []string{".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".gif"}
 	videos = []string{"youtube", "gfycat", "youtu"}
+
+	r, err := regexp.Compile(ConfigFile.TERMINAL_REGEX)
+	if err != nil {
+		slog.Error("Error compiling terminal regex", slog.Any("err", err))
+	}
+	re = r
 }
 
 func createRedditClient() {
@@ -45,11 +51,7 @@ func createRedditClient() {
 }
 
 func IsTerminalWord(word string) bool {
-	compiled, err := regexp.MatchString(ConfigFile.TERMINAL_REGEX, word)
-	if err != nil {
-		fmt.Println(fmt.Errorf("error matching string with regex %s, on word %s. %w", ConfigFile.TERMINAL_REGEX, word, err))
-	}
-	return compiled
+	return re.MatchString(word)
 }
 
 func DisplayRedditSubreddit(subreddit string) []*reddit.Post {
@@ -58,7 +60,7 @@ func DisplayRedditSubreddit(subreddit string) []*reddit.Post {
 	}
 	posts, _, err := redditClient.Subreddit.HotPosts(context.TODO(), subreddit, &reddit.ListOptions{})
 	if err != nil {
-		fmt.Println(fmt.Errorf("error fetching hot posts for subreddit %s. With error: %w", subreddit, err))
+		slog.Error("Error fetching hot posts for subreddit", slog.String("subreddit", subreddit), slog.Any("err", err))
 	}
 
 	return posts
@@ -70,7 +72,7 @@ func GetRedditPost(redditPostID string) *reddit.PostAndComments {
 	}
 	postCommnents, _, err := redditClient.Post.Get(context.TODO(), redditPostID)
 	if err != nil {
-		fmt.Println(fmt.Errorf("error fetching from reddit with error: %w", err))
+		slog.Error("Error fetching reddit post", slog.String("postID", redditPostID), slog.Any("err", err))
 	}
 
 	return postCommnents
@@ -165,24 +167,4 @@ func arrayContainsSub(array []string, param string) bool {
 		}
 	}
 	return false
-}
-
-// CommandParsed parsed struct for count command
-type CommandParsed map[string]string
-
-func ParseArguments(arguments []string, options []*discordgo.ApplicationCommandInteractionDataOption) (parsedArguments CommandParsed) {
-	parsedArguments = make(map[string]string)
-	// Or convert the slice into a map
-	optionMap := make(map[string]*discordgo.ApplicationCommandInteractionDataOption, len(options))
-	for _, opt := range options {
-		optionMap[opt.Name] = opt
-	}
-
-	for _, arg := range arguments {
-		if option, ok := optionMap[arg]; ok {
-			parsedArguments[cases.Title(language.English).String(arg)] = option.Value.(string)
-		}
-	}
-
-	return parsedArguments
 }

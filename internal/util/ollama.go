@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 )
 
@@ -20,7 +21,7 @@ func CreateOllamaGeneration(prompt OllamaGenerateRequest) (OllamaGenerateRespons
 	req, err := http.NewRequest("POST", fmt.Sprintf("http://%s/api/generate", ConfigFile.OLLAMA_URL), bytes.NewBuffer(data))
 
 	if err != nil {
-		fmt.Println(err)
+		slog.Error("Error creating ollama request", slog.Any("err", err))
 		return OllamaGenerateResponse{}, err
 	}
 	req.Header.Add("Content-Type", "application/json")
@@ -29,13 +30,13 @@ func CreateOllamaGeneration(prompt OllamaGenerateRequest) (OllamaGenerateRespons
 	case "basic":
 		username, err := GetOllamaUsername()
 		if err != nil {
-			fmt.Println(err)
+			slog.Error("Error getting ollama username", slog.Any("err", err))
 			return OllamaGenerateResponse{}, err
 		}
 
 		password, err := GetOllamaPassword()
 		if err != nil {
-			fmt.Println(err)
+			slog.Error("Error getting ollama password", slog.Any("err", err))
 			return OllamaGenerateResponse{}, err
 		}
 
@@ -46,7 +47,7 @@ func CreateOllamaGeneration(prompt OllamaGenerateRequest) (OllamaGenerateRespons
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Println(err)
+		slog.Error("Error sending ollama request", slog.Any("err", err))
 		return OllamaGenerateResponse{}, err
 	}
 
@@ -57,7 +58,7 @@ func CreateOllamaGeneration(prompt OllamaGenerateRequest) (OllamaGenerateRespons
 		bodyData = buf.String()
 	}
 	if resp.StatusCode != 200 {
-		fmt.Println(bodyData)
+		slog.Error("Non-200 response from ollama", slog.String("body", bodyData))
 		return OllamaGenerateResponse{}, errors.New(bodyData)
 	}
 

@@ -6,15 +6,18 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
+	"sync/atomic"
 	"syscall"
 
 	"github.com/stollenaar/copypastabotv2/internal/commands"
+	"github.com/stollenaar/copypastabotv2/internal/commands/speak"
+	"github.com/stollenaar/copypastabotv2/internal/database"
 	"github.com/stollenaar/copypastabotv2/internal/util"
 
-	"github.com/bwmarrin/discordgo"
 	"github.com/disgoorg/disgo"
 	"github.com/disgoorg/disgo/bot"
 	"github.com/disgoorg/disgo/discord"
@@ -25,6 +28,8 @@ import (
 
 var (
 	client *bot.Client
+
+	gatewayReady atomic.Bool
 
 	GuildID        = flag.String("guild", "", "Test guild ID. If not passed - bot registers commands globally")
 	RemoveCommands = flag.Bool("rmcmd", false, "Remove all commands after shutdowning or not")
@@ -39,6 +44,11 @@ func init() {
 		bot.WithGatewayConfigOpts(gateway.WithIntents(gateway.IntentGuildMembers|gateway.IntentGuildMessages|gateway.IntentGuildVoiceStates)),
 		bot.WithEventListenerFunc(func(event *events.ApplicationCommandInteractionCreate) {
 			data := event.Data
+			slog.Info("command invoked",
+				slog.String("command", data.CommandName()),
+				slog.String("user_id", event.User().ID.String()),
+				slog.String("guild_id", event.GuildID().String()),
+			)
 			if event.Data.Type() == discord.ApplicationCommandTypeSlash {
 				commands.CommandHandlers[data.CommandName()](event)
 			} else {
@@ -46,6 +56,11 @@ func init() {
 			}
 		}),
 		bot.WithEventListenerFunc(func(event *events.ComponentInteractionCreate) {
+			slog.Info("component interaction",
+				slog.String("custom_id", event.Data.CustomID()),
+				slog.String("user_id", event.Member().User.ID.String()),
+				slog.String("guild_id", event.GuildID().String()),
+			)
 			commands.ComponentHandlers[strings.Split(event.Data.CustomID(), ";")[0]](event)
 		}),
 		// bot.WithEventListenerFunc(func(event *events.ModalSubmitInteractionCreate) {
@@ -61,6 +76,27 @@ func init() {
 	}
 	client = c
 	util.ConfigFile.DEBUG = *Debug
+}
+
+func startHealthServer(port string) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("ok"))
+	})
+	mux.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
+		if gatewayReady.Load() {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("ok"))
+		} else {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			w.Write([]byte("not ready"))
+		}
+	})
+	slog.Info("Health server listening", slog.String("port", port))
+	if err := http.ListenAndServe(":"+port, mux); err != nil {
+		slog.Error("Health server failed", slog.Any("err", err))
+	}
 }
 
 func main() {
@@ -100,6 +136,8 @@ func main() {
 		return
 	}
 
+	go startHealthServer(util.ConfigFile.HEALTH_PORT)
+
 	slog.Info("Adding commands...")
 	registeredCommands := make([]discord.ApplicationCommand, len(commands.ApplicationCommands))
 	if *GuildID != "" {
@@ -122,7 +160,15 @@ func main() {
 	if err := client.OpenGateway(context.TODO()); err != nil {
 		log.Fatal("error while connecting to gateway: ", err)
 	}
+	gatewayReady.Store(true)
 	slog.Info("Bot started")
+
+	if pending, err := database.GetPendingSpeakItems(); err != nil {
+		slog.Error("error loading pending speak items", slog.Any("err", err))
+	} else if len(pending) > 0 {
+		slog.Info("re-queueing pending speak items", slog.Int("count", len(pending)))
+		speak.Reenqueue(pending, client)
+	}
 
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
@@ -153,68 +199,4 @@ func main() {
 			}
 		}
 	}
-}
-
-// PingCommand sends back the pong
-func PingCommand(bot *discordgo.Session, interaction *discordgo.InteractionCreate) {
-	bot.InteractionRespond(interaction.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: "Pong",
-		},
-	})
-}
-
-func containsCommand(cmd *discordgo.ApplicationCommand, commands []*discordgo.ApplicationCommand) *discordgo.ApplicationCommand {
-	for _, c := range commands {
-		if cmd.Name == c.Name {
-			return c
-		}
-	}
-	return nil
-}
-
-// optionsEqual compares the Options slices of two ApplicationCommands.
-func optionsEqual(cmd, registered *discordgo.ApplicationCommand) bool {
-	if len(cmd.Options) != len(registered.Options) {
-		return false
-	}
-	for i := range cmd.Options {
-		if !optionEqual(cmd.Options[i], registered.Options[i]) {
-			return false
-		}
-	}
-	return true
-}
-
-// optionEqual compares two ApplicationCommandOption objects recursively.
-func optionEqual(a, b *discordgo.ApplicationCommandOption) bool {
-	if a.Name != b.Name ||
-		a.Description != b.Description ||
-		a.Type != b.Type ||
-		a.Required != b.Required {
-		return false
-	}
-
-	// Compare choices if available.
-	if len(a.Choices) != len(b.Choices) {
-		return false
-	}
-	for i := range a.Choices {
-		if a.Choices[i].Name != b.Choices[i].Name ||
-			a.Choices[i].Value != b.Choices[i].Value {
-			return false
-		}
-	}
-
-	// Compare sub-options recursively.
-	if len(a.Options) != len(b.Options) {
-		return false
-	}
-	for i := range a.Options {
-		if !optionEqual(a.Options[i], b.Options[i]) {
-			return false
-		}
-	}
-	return true
 }

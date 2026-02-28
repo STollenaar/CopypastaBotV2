@@ -2,30 +2,15 @@ package util
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/sns"
-	"github.com/bwmarrin/discordgo"
+	"github.com/disgoorg/disgo/discord"
 )
-
-var (
-	snsClient *sns.Client
-)
-
-func init() {
-	// Create a config with the credentials provider.
-	cfg, err := config.LoadDefaultConfig(context.TODO())
-	if err != nil {
-		panic("configuration error, " + err.Error())
-	}
-	snsClient = sns.NewFromConfig(cfg)
-}
 
 type Object struct {
 	Type          string `json:"type"`
@@ -39,14 +24,13 @@ type Object struct {
 
 // MessageObject general messageobject for functions
 type MessageObject struct {
-	GuildID   string               `bson:"GuildID" json:"GuildID"`
-	ChannelID string               `bson:"ChannelID" json:"ChannelID"`
-	MessageID string               `bson:"_id" json:"MessageID"`
-	Author    string               `bson:"Author" json:"Author"`
-	Content   []string             `bson:"Content" json:"Content"`
-	Date      discordgo.TimeStamps `bson:"Date" json:"Date"`
+	GuildID   string            `bson:"GuildID" json:"GuildID"`
+	ChannelID string            `bson:"ChannelID" json:"ChannelID"`
+	MessageID string            `bson:"_id" json:"MessageID"`
+	Author    string            `bson:"Author" json:"Author"`
+	Content   []string          `bson:"Content" json:"Content"`
+	Date      discord.Timestamp `bson:"Date" json:"Date"`
 }
-
 
 type OllamaGenerateResponse struct {
 	Model              string    `json:"model"`
@@ -63,15 +47,15 @@ type OllamaGenerateResponse struct {
 }
 
 type OllamaGenerateRequest struct {
-	Model  string `json:"model"`
-	Prompt string `json:"prompt"`
+	Model  string                 `json:"model"`
+	Prompt string                 `json:"prompt"`
 	Format map[string]interface{} `json:"format"`
-	Stream bool   `json:"stream"`
+	Stream bool                   `json:"stream"`
 }
 
-func GetMessageObject(object Object) (discordgo.Message, error) {
+func GetMessageObject(object Object) (discord.Message, error) {
 	if _, err := strconv.Atoi(object.Token); err == nil {
-		return discordgo.Message{}, errors.New("object token is a snowflake")
+		return discord.Message{}, errors.New("object token is a snowflake")
 	}
 	resp, err := SendRequest("GET", object.ApplicationID, object.Token, WEBHOOK, []byte{})
 	var bodyString string
@@ -81,15 +65,15 @@ func GetMessageObject(object Object) (discordgo.Message, error) {
 		bodyData := buf.String()
 
 		bodyString = string(bodyData)
-		fmt.Println(resp, bodyString)
+		slog.Debug("HTTP response", slog.Any("response", resp), slog.String("body", bodyString))
 	}
 	if err != nil {
-		return discordgo.Message{}, fmt.Errorf("error sending request %v", err)
+		return discord.Message{}, fmt.Errorf("error sending request %v", err)
 	}
-	var message discordgo.Message
+	var message discord.Message
 	err = json.Unmarshal([]byte(bodyString), &message)
 	if err != nil {
-		return discordgo.Message{}, fmt.Errorf("error parsing into interaction with data: %s, and error: %v", bodyString, err)
+		return discord.Message{}, fmt.Errorf("error parsing into interaction with data: %s, and error: %v", bodyString, err)
 	}
 	return message, nil
 }

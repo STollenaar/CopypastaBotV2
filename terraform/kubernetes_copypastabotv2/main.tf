@@ -14,6 +14,7 @@ locals {
     OLLAMA_MODEL                       = "llama3.2:3b"
     AWS_OLLAMA_AUTH_USERNAME           = "/ollama/dan_username"
     AWS_OLLAMA_AUTH_PASSWORD           = "/ollama/dan_password"
+    DUCKDB_PATH                        = "/duckdb"
   }
 }
 

@@ -6,9 +6,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 
-	"github.com/bwmarrin/discordgo"
+	"github.com/disgoorg/disgo/discord"
 )
 
 type KIND string
@@ -27,13 +28,13 @@ const (
 
 func SendError(sqsObject Object) {
 	e := "If you see this, and error likely happened. Whoops"
-	response := discordgo.WebhookEdit{
+	response := discord.MessageUpdate{
 		Content: &e,
 	}
 
 	data, err := json.Marshal(response)
 	if err != nil {
-		fmt.Println(err)
+		slog.Error("Error marshalling error response", slog.Any("err", err))
 	}
 	SendRequest("PATCH", sqsObject.ApplicationID, sqsObject.Token, WEBHOOK, data)
 }
@@ -63,17 +64,17 @@ func SendRequest(method, interactionID, interactionToken string, kind KIND, data
 	req, err = http.NewRequest(method, url, bytes.NewBuffer(data))
 
 	if err != nil {
-		fmt.Println(err)
+		slog.Error("Error creating HTTP request", slog.Any("err", err))
 		return nil, err
 	}
 	req.Header.Add("Content-Type", "application/json")
 	token := ConfigFile.GetDiscordToken()
 	req.Header.Add("Authorization", "Bot "+token)
 	client := &http.Client{}
-	fmt.Println(*req)
+
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Println(err)
+		slog.Error("Error sending HTTP request", slog.Any("err", err))
 		return nil, err
 	}
 	return resp, nil
@@ -83,17 +84,17 @@ func SendRequest(method, interactionID, interactionToken string, kind KIND, data
 func IsVerified(body, signature, timestamp string) bool {
 	decodedSig, err := hex.DecodeString(signature)
 	if err != nil {
-		fmt.Println(fmt.Errorf("error decoding signature %w", err))
+		slog.Error("Error decoding signature", slog.Any("err", err))
 		return false
 	}
 	publicToken, err := ConfigFile.GetPublicDiscordToken()
 	if err != nil {
-		fmt.Println(fmt.Errorf("error fetching public key %w", err))
+		slog.Error("Error fetching public key", slog.Any("err", err))
 		return false
 	}
 	decodedKey, err := hex.DecodeString(publicToken)
 	if err != nil {
-		fmt.Println(fmt.Errorf("error decoding public key %w", err))
+		slog.Error("Error decoding public key", slog.Any("err", err))
 		return false
 	}
 	return ed25519.Verify(decodedKey, []byte(timestamp+body), decodedSig)
@@ -108,16 +109,16 @@ func SendAsWebhook(data []byte) (*http.Response, error) {
 	req, err := http.NewRequest("POST", fmt.Sprintf(WEBHOOK_POST_URL, webhook.id, webhook.token), bytes.NewBuffer(data))
 
 	if err != nil {
-		fmt.Println(err)
+		slog.Error("Error creating webhook request", slog.Any("err", err))
 		return nil, err
 	}
 	req.Header.Add("Content-Type", "application/json")
 
 	client := &http.Client{}
-	fmt.Println(*req)
+	slog.Debug("Sending webhook request", slog.Any("request", *req))
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Println(err)
+		slog.Error("Error sending webhook request", slog.Any("err", err))
 		return nil, err
 	}
 	return resp, nil
