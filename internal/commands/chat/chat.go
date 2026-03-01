@@ -47,7 +47,7 @@ func (c ChatCommand) Handler(event *events.ApplicationCommandInteractionCreate) 
 	}
 
 	sub := event.SlashCommandInteractionData()
-	chatRSP, err := GetChatGPTResponse(event.Data.CommandName(), sub.Options["message"].String(), event.User().ID.String())
+	chatRSP, err := GetLLMResponse(event.Data.CommandName(), sub.Options["message"].String(), event.User().ID.String())
 
 	if err != nil {
 		slog.Error("Error interacting with chatgpt", slog.Any("err", err))
@@ -98,7 +98,7 @@ func (c ChatCommand) MessageCommandHandler(event *events.ApplicationCommandInter
 		return
 	}
 
-	chatRSP, err := GetChatGPTResponse(event.Data.CommandName(), event.MessageCommandInteractionData().TargetMessage().Content, event.User().ID.String())
+	chatRSP, err := GetLLMResponse(event.Data.CommandName(), event.MessageCommandInteractionData().TargetMessage().Content, event.User().ID.String())
 
 	if err != nil {
 		slog.Error("Error interacting with chatgpt", slog.Any("err", err))
@@ -150,7 +150,7 @@ func (c ChatCommand) MessageCommandHandler(event *events.ApplicationCommandInter
 	}
 }
 
-func GetChatGPTResponse(promptName, message, userID string) (out ChatResponse, err error) {
+func GetLLMResponse(promptName, message, userID string) (out ChatResponse, err error) {
 	var prompt string
 	switch promptName {
 	case "insult":

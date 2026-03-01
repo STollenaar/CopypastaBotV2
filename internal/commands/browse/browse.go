@@ -40,7 +40,10 @@ func (b *browserTracker) Unmarshal(data []byte) error {
 	if len(d) != 4 {
 		return errors.New("unknown data format")
 	}
-	page, _ := strconv.Atoi(d[1])
+	page, err := strconv.Atoi(d[1])
+	if err != nil {
+		slog.Error("Error converting custom id for page", slog.Any("err", err))
+	}
 	b.SubReddit = d[0]
 	b.Page = page
 	b.Action = d[2]
@@ -108,6 +111,9 @@ func (b BrowseCommand) ComponentHandler(event *events.ComponentInteractionCreate
 	}
 
 	posts := util.DisplayRedditSubreddit(browser.SubReddit)
+	for browser.Page >= len(posts) {
+		browser.Page--
+	}
 	embed := util.DisplayRedditPost(posts[browser.Page].ID, true)[0]
 
 	_, err = event.Client().Rest.UpdateInteractionResponse(event.ApplicationID(), event.Token(), discord.MessageUpdate{

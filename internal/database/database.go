@@ -165,6 +165,80 @@ func SetSpeakItemStatus(id int64, status string) error {
 	return nil
 }
 
+// StoreSpeakChunk stores the synthesized MP3 bytes for one audio chunk and returns its ID.
+func StoreSpeakChunk(queueID int64, chunkIndex int, audioData []byte, isLast bool) (int64, error) {
+	var id int64
+	err := duckdbClient.QueryRow(
+		`INSERT INTO speak_queue_chunks (queue_id, chunk_index, audio_data, is_last_chunk)
+		 VALUES (?, ?, ?, ?)
+		 RETURNING id`,
+		queueID, chunkIndex, audioData, isLast,
+	).Scan(&id)
+	if err != nil {
+		return 0, fmt.Errorf("store speak chunk: %w", err)
+	}
+	return id, nil
+}
+
+// GetSpeakChunkAudio fetches the raw MP3 bytes for a chunk by its ID.
+func GetSpeakChunkAudio(chunkID int64) ([]byte, error) {
+	var data []byte
+	err := duckdbClient.QueryRow(
+		`SELECT audio_data FROM speak_queue_chunks WHERE id = ?`, chunkID,
+	).Scan(&data)
+	if err != nil {
+		return nil, fmt.Errorf("get speak chunk audio: %w", err)
+	}
+	return data, nil
+}
+
+// DeleteSpeakChunk removes a chunk row once it has been played.
+func DeleteSpeakChunk(chunkID int64) error {
+	_, err := duckdbClient.Exec(`DELETE FROM speak_queue_chunks WHERE id = ?`, chunkID)
+	if err != nil {
+		return fmt.Errorf("delete speak chunk: %w", err)
+	}
+	return nil
+}
+
+// ChunkRecord is a lightweight descriptor of a stored audio chunk (no audio bytes).
+type ChunkRecord struct {
+	ID          int64
+	ChunkIndex  int
+	IsLastChunk bool
+}
+
+// GetSpeakChunksForQueue returns the stored chunk descriptors for a queue item, ordered by chunk_index.
+func GetSpeakChunksForQueue(queueID int64) ([]ChunkRecord, error) {
+	rows, err := duckdbClient.Query(
+		`SELECT id, chunk_index, is_last_chunk FROM speak_queue_chunks WHERE queue_id = ? ORDER BY chunk_index`,
+		queueID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get speak chunks: %w", err)
+	}
+	defer rows.Close()
+
+	var chunks []ChunkRecord
+	for rows.Next() {
+		var c ChunkRecord
+		if err := rows.Scan(&c.ID, &c.ChunkIndex, &c.IsLastChunk); err != nil {
+			return nil, fmt.Errorf("scanning chunk: %w", err)
+		}
+		chunks = append(chunks, c)
+	}
+	return chunks, rows.Err()
+}
+
+// DeleteSpeakChunksForQueue removes all chunks belonging to a queue item.
+func DeleteSpeakChunksForQueue(queueID int64) error {
+	_, err := duckdbClient.Exec(`DELETE FROM speak_queue_chunks WHERE queue_id = ?`, queueID)
+	if err != nil {
+		return fmt.Errorf("delete speak chunks for queue: %w", err)
+	}
+	return nil
+}
+
 // GetPendingSpeakItems returns all items with status 'pending', ordered by creation time.
 func GetPendingSpeakItems() ([]QueueRecord, error) {
 	rows, err := duckdbClient.Query(

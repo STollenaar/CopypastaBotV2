@@ -6,6 +6,7 @@ import (
 
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
+	"github.com/stollenaar/copypastabotv2/internal/commands/admin"
 	"github.com/stollenaar/copypastabotv2/internal/commands/browse"
 	"github.com/stollenaar/copypastabotv2/internal/commands/chat"
 	"github.com/stollenaar/copypastabotv2/internal/commands/markov"
@@ -20,7 +21,14 @@ type CommandI interface {
 }
 
 var (
-	Commands               = []CommandI{browse.BrowseCmd, chat.ChatCmd, markov.MarkovCmd, pasta.PastaCmd, speak.SpeakCmd}
+	Commands = []CommandI{
+		admin.AdminCmd,
+		browse.BrowseCmd,
+		chat.ChatCmd,
+		markov.MarkovCmd,
+		pasta.PastaCmd,
+		speak.SpeakCmd,
+	}
 	ApplicationCommands    []discord.ApplicationCommandCreate
 	CommandHandlers        = make(map[string]func(e *events.ApplicationCommandInteractionCreate))
 	MessageCommandHandlers = make(map[string]func(e *events.ApplicationCommandInteractionCreate))

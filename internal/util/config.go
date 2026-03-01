@@ -69,6 +69,8 @@ type Config struct {
 
 	DUCKDB_PATH string
 	HEALTH_PORT string
+
+	ADMIN_USER_ID string
 }
 
 var (
@@ -138,6 +140,7 @@ func init() {
 		AWS_OLLAMA_AUTH_PASSWORD:           os.Getenv("AWS_OLLAMA_AUTH_PASSWORD"),
 		DUCKDB_PATH:                        os.Getenv("DUCKDB_PATH"),
 		HEALTH_PORT:                        os.Getenv("HEALTH_PORT"),
+		ADMIN_USER_ID:                      os.Getenv("ADMIN_USER_ID"),
 	}
 
 	if ConfigFile.TERMINAL_REGEX == "" {

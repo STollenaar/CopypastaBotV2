@@ -1,6 +1,7 @@
 package speak
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
 	"encoding/json"
@@ -30,7 +31,7 @@ import (
 )
 
 type Queue struct {
-	synthed     *polly.SynthesizeSpeechOutput
+	chunkID     int64 // DB row in speak_queue_chunks holding the MP3 bytes
 	sqsObject   util.Object
 	userID      string
 	dbID        int64
@@ -46,9 +47,10 @@ var (
 	pollyClient *polly.Client
 
 	mu          sync.Mutex
-	queues      map[string][]*Queue    // per-guild queue
-	guildActive map[string]bool        // per-guild "playback in progress" flag
-	guildVC     map[string]*voice.Conn // per-guild active voice connection
+	queues      map[string][]*Queue      // per-guild queue
+	guildActive map[string]bool          // per-guild "playback in progress" flag
+	guildVC     map[string]*voice.Conn   // per-guild active voice connection
+	skipSignals map[string]chan struct{} // per-guild skip signal for current playback
 
 	SpeakCmd = SpeakCommand{
 		Name:        "speak",
@@ -66,7 +68,7 @@ func init() {
 	} else {
 		cfg, err := config.LoadDefaultConfig(context.TODO())
 		if err != nil {
-			panic("configuration error, " + err.Error())
+			slog.Error("Error loading AWS config", slog.Any("err", err))
 		}
 		pollyClient = polly.NewFromConfig(cfg)
 	}
@@ -74,6 +76,56 @@ func init() {
 	queues = make(map[string][]*Queue)
 	guildActive = make(map[string]bool)
 	guildVC = make(map[string]*voice.Conn)
+	skipSignals = make(map[string]chan struct{})
+}
+
+// QueueItem is a read-only snapshot of a pending queue entry for display purposes.
+type QueueItem struct {
+	Position int
+	UserID   string
+	Type     string
+	Snippet  string // first 100 chars of Data
+}
+
+// GetQueueItems returns a snapshot of the pending queue for a guild.
+func GetQueueItems(guildID string) []QueueItem {
+	mu.Lock()
+	defer mu.Unlock()
+	items := queues[guildID]
+	result := make([]QueueItem, len(items))
+	for i, item := range items {
+		snippet := item.sqsObject.Data
+		if len(snippet) > 100 {
+			snippet = snippet[:100] + "..."
+		}
+		result[i] = QueueItem{
+			Position: i + 1,
+			UserID:   item.userID,
+			Type:     item.sqsObject.Type,
+			Snippet:  snippet,
+		}
+	}
+	return result
+}
+
+// FlushQueue clears the pending queue for a guild without interrupting current playback.
+func FlushQueue(guildID string) {
+	mu.Lock()
+	defer mu.Unlock()
+	queues[guildID] = nil
+}
+
+// SkipCurrent signals the active playback goroutine for a guild to stop the current item.
+func SkipCurrent(guildID string) {
+	mu.Lock()
+	ch := skipSignals[guildID]
+	mu.Unlock()
+	if ch != nil {
+		select {
+		case ch <- struct{}{}:
+		default:
+		}
+	}
 }
 
 func (s SpeakCommand) Handler(event *events.ApplicationCommandInteractionCreate) {
@@ -102,26 +154,32 @@ func (s SpeakCommand) Handler(event *events.ApplicationCommandInteractionCreate)
 		ApplicationID: event.ApplicationID().String(),
 	}
 
-	if user, ok := sub.Options["user"]; ok {
+	switch *sub.SubCommandName {
+	case "user":
 		speakObject.Type = "user"
-		speakObject.Data = user.Snowflake().String()
+		user := sub.Options["user"].Snowflake()
+
+		speakObject.Data = user.String()
 		resp, err := util.ConfigFile.SendStatsBotRequest(speakObject)
 		speakObject.Data = resp.Data
 		if err != nil {
 			slog.Error("Encountered an error while processing the speak command", slog.Any("err", err))
 			return
 		}
-	} else if redditPost, ok := sub.Options["redditpost"]; ok {
-		speakObject.Data = redditPost.String()
+	case "redditpost":
+		redditPost := sub.Options["postid"].String()
+		speakObject.Data = redditPost
 		speakObject.Type = "redditpost"
-	} else if url, ok := sub.Options["url"]; ok {
-		speakObject.Data = markov.HandleURL(url.String())
+	case "url":
+		url := sub.Options["url"].String()
+		speakObject.Data = markov.HandleURL(url)
 		speakObject.Type = "url"
-	} else if message, ok := sub.Options["chat"]; ok {
+	case "chat":
 		speakObject.Type = "chat"
-		data, err := chat.GetChatGPTResponse("speak", message.String(), event.User().ID.String())
+		message := sub.Options["message"].String()
+		data, err := chat.GetLLMResponse("speak", message, event.User().ID.String())
 		if err != nil {
-			slog.Error("Error interacting with chatgpt", slog.Any("err", err))
+			slog.Error("Error interacting with LLM", slog.Any("err", err))
 			_, err = event.Client().Rest.UpdateInteractionResponse(event.ApplicationID(), event.Token(), discord.MessageUpdate{
 				Content: util.Pointer("If you see this, and error likely happened. Whoops"),
 			})
@@ -133,30 +191,61 @@ func (s SpeakCommand) Handler(event *events.ApplicationCommandInteractionCreate)
 		speakObject.Data = data.Response
 	}
 
-	synthData(speakObject, event.User().ID.String(), event.Client())
+	_, err = event.Client().Rest.UpdateInteractionResponse(event.ApplicationID(), event.Token(), discord.MessageUpdate{
+		Content: util.Pointer("Added to speech queue"),
+	})
+	if err != nil {
+		slog.Error("Error editing the response:", slog.Any("err", err))
+	}
+
+	go synthData(speakObject, event.User().ID.String(), event.Client())
 }
 
 func (s SpeakCommand) CreateCommandArguments() []discord.ApplicationCommandOption {
 	return []discord.ApplicationCommandOption{
-		discord.ApplicationCommandOptionString{
+		discord.ApplicationCommandOptionSubCommand{
 			Name:        "url",
-			Description: "URL of the page to make a markov chain from",
-			Required:    false,
+			Description: "Run the speech from the text of a site",
+			Options: []discord.ApplicationCommandOption{
+				discord.ApplicationCommandOptionString{
+					Name:        "url",
+					Description: "URL of the page to make a markov chain from",
+					Required:    true,
+				},
+			},
 		},
-		discord.ApplicationCommandOptionUser{
+		discord.ApplicationCommandOptionSubCommand{
 			Name:        "user",
-			Description: "User to create a markov chain of",
-			Required:    false,
+			Description: "Run the speech from one of the user messages",
+			Options: []discord.ApplicationCommandOption{
+				discord.ApplicationCommandOptionUser{
+					Name:        "user",
+					Description: "User to create a markov chain of",
+					Required:    true,
+				},
+			},
 		},
-		discord.ApplicationCommandOptionString{
+		discord.ApplicationCommandOptionSubCommand{
 			Name:        "redditpost",
-			Description: "Reddit post ID",
-			Required:    false,
+			Description: "Speech from a reddit post",
+			Options: []discord.ApplicationCommandOption{
+				discord.ApplicationCommandOptionString{
+					Name:        "postid",
+					Description: "Reddit post ID",
+					Required:    true,
+				},
+			},
 		},
-		discord.ApplicationCommandOptionString{
+		discord.ApplicationCommandOptionSubCommand{
 			Name:        "chat",
-			Description: "Chat message for the copypastabot",
-			Required:    false,
+			Description: "Have copypastabot read the text",
+			Options: []discord.ApplicationCommandOption{
+				discord.ApplicationCommandOptionString{
+					Name:        "message",
+					Description: "Message for the copypastabot",
+					Required:    true,
+				},
+			},
 		},
 	}
 }
@@ -211,13 +300,27 @@ func synthData(object util.Object, userID string, bot *bot.Client) {
 			continue
 		}
 
+		isLast := i == len(contents)-1
+		audioBytes, err := io.ReadAll(synthed.AudioStream)
+		synthed.AudioStream.Close()
+		if err != nil {
+			slog.Error("Error reading Polly audio stream", slog.Any("err", err))
+			continue
+		}
+
+		chunkID, err := database.StoreSpeakChunk(dbID, i, audioBytes, isLast)
+		if err != nil {
+			slog.Error("Error storing audio chunk in DB", slog.Any("err", err))
+			continue
+		}
+
 		mu.Lock()
 		queues[object.GuildID] = append(queues[object.GuildID], &Queue{
-			synthed:     synthed,
+			chunkID:     chunkID,
 			userID:      userID,
 			sqsObject:   object,
 			dbID:        dbID,
-			isLastChunk: i == len(contents)-1,
+			isLastChunk: isLast,
 		})
 		mu.Unlock()
 	}
@@ -275,10 +378,19 @@ func doSpeech(guildID string, bot *bot.Client) {
 	// Sleep for a specified amount of time before playing the sound.
 	time.Sleep(250 * time.Millisecond)
 
-	stream := currentSpeech.synthed.AudioStream
+	audioBytes, err := database.GetSpeakChunkAudio(currentSpeech.chunkID)
+	if err != nil {
+		slog.Error("Error fetching chunk audio from DB", slog.Any("err", err))
+		doSpeech(guildID, bot)
+		return
+	}
+	if err := database.DeleteSpeakChunk(currentSpeech.chunkID); err != nil {
+		slog.Error("Error deleting chunk audio from DB", slog.Any("err", err))
+	}
+
 	conn := bot.VoiceManager.CreateConn(snowflake.MustParse(guildID))
 
-	err := conn.Open(context.TODO(), *vs.ChannelID, false, false)
+	err = conn.Open(context.TODO(), *vs.ChannelID, false, false)
 
 	// Stay connected between items; disconnect only when the queue is drained.
 	mu.Lock()
@@ -301,33 +413,24 @@ func doSpeech(guildID string, bot *bot.Client) {
 		slog.Error("Error setting speaking to true", slog.Any("err", err))
 	}
 
-	outFile, err := os.CreateTemp("/tmp", "*.mp3")
+	encodeSession, err := dca.EncodeMem(bytes.NewReader(audioBytes), dca.StdEncodeOptions)
 	if err != nil {
-		slog.Error("Error creating temp mp3 file", slog.Any("err", err))
+		slog.Error("Error DCA encoding audio", slog.Any("err", err))
 	}
+
+	skipCh := make(chan struct{}, 1)
+	mu.Lock()
+	skipSignals[guildID] = skipCh
+	mu.Unlock()
 	defer func() {
-		err := outFile.Close()
-		if err != nil {
-			slog.Error("Error closing tmp file", slog.Any("err", err))
+		mu.Lock()
+		if skipSignals[guildID] == skipCh {
+			skipSignals[guildID] = nil
 		}
+		mu.Unlock()
 	}()
 
-	_, err = io.Copy(outFile, stream)
-	if err != nil {
-		slog.Error("Error copying stream to temp file", slog.Any("err", err))
-	}
-
-	encodeSession, err := dca.EncodeFile(outFile.Name(), dca.StdEncodeOptions)
-	if err != nil {
-		slog.Error("Error DCA encoding file", slog.Any("err", err))
-	}
-
-	writeOpus(encodeSession, conn.UDP())
-	// Make sure everything is cleaned up.
-	err = os.Remove(outFile.Name())
-	if err != nil {
-		slog.Error("Error removing file", slog.Any("err", err))
-	}
+	writeOpus(encodeSession, conn.UDP(), skipCh)
 
 	if currentSpeech.isLastChunk {
 		if err := database.SetSpeakItemStatus(currentSpeech.dbID, "done"); err != nil {
@@ -350,13 +453,17 @@ func doSpeech(guildID string, bot *bot.Client) {
 	doSpeech(guildID, bot)
 }
 
-// Reenqueue re-processes speak queue items loaded from the DB on startup.
-// It marks each old record done first to prevent double-replay on the next restart.
+// Reenqueue restores pending speak items into the in-memory queue on startup.
+// Chunks already synthesized and stored in the DB are reused; items whose chunks
+// were never stored (crash mid-synthesis) are re-synthesized as a fallback.
 func Reenqueue(items []database.QueueRecord, bot *bot.Client) {
 	for _, item := range items {
-		if err := database.SetSpeakItemStatus(item.ID, "done"); err != nil {
-			slog.Error("Error marking stale speak item as done", slog.Any("err", err))
+		chunks, err := database.GetSpeakChunksForQueue(item.ID)
+		if err != nil {
+			slog.Error("Error fetching chunks for speak item", slog.Any("err", err))
+			continue
 		}
+
 		obj := util.Object{
 			Type:          item.CmdType,
 			Command:       item.CmdName,
@@ -365,11 +472,40 @@ func Reenqueue(items []database.QueueRecord, bot *bot.Client) {
 			ApplicationID: item.AppID,
 			Token:         item.Token,
 		}
-		synthData(obj, item.UserID, bot)
+
+		if len(chunks) == 0 {
+			// Chunks were never stored (crashed during synthesis); re-synthesize.
+			if err := database.SetSpeakItemStatus(item.ID, "done"); err != nil {
+				slog.Error("Error marking speak item as done", slog.Any("err", err))
+			}
+			go synthData(obj, item.UserID, bot)
+			continue
+		}
+
+		// Reload stored chunks into the in-memory queue.
+		mu.Lock()
+		for _, chunk := range chunks {
+			queues[item.GuildID] = append(queues[item.GuildID], &Queue{
+				chunkID:     chunk.ID,
+				userID:      item.UserID,
+				sqsObject:   obj,
+				dbID:        item.ID,
+				isLastChunk: chunk.IsLastChunk,
+			})
+		}
+		shouldStart := !guildActive[item.GuildID]
+		if shouldStart {
+			guildActive[item.GuildID] = true
+		}
+		mu.Unlock()
+
+		if shouldStart {
+			go doSpeech(item.GuildID, bot)
+		}
 	}
 }
 
-func writeOpus(encodeSession *dca.EncodeSession, w io.Writer) {
+func writeOpus(encodeSession *dca.EncodeSession, w io.Writer, done <-chan struct{}) {
 	defer encodeSession.Cleanup()
 
 	ticker := time.NewTicker(time.Millisecond * 20)
@@ -378,9 +514,16 @@ func writeOpus(encodeSession *dca.EncodeSession, w io.Writer) {
 	var frameLen int16
 	// Don't wait for the first tick, run immediately.
 	for ; true; <-ticker.C {
+		select {
+		case <-done:
+			return
+		default:
+		}
+
 		err := binary.Read(encodeSession, binary.LittleEndian, &frameLen)
 		if err != nil {
-			panic("error reading file: " + err.Error())
+			slog.Error("Error reading opus file", slog.Any("err", err))
+			return
 		}
 
 		// Copy the frame.
