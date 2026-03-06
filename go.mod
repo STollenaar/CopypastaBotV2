@@ -3,6 +3,7 @@ module github.com/stollenaar/copypastabotv2
 go 1.25.0
 
 require (
+	github.com/anthropics/anthropic-sdk-go v1.26.0
 	github.com/aws/aws-sdk-go-v2/service/polly v1.45.9
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.56.2
 	github.com/disgoorg/disgo v0.19.0-rc.6.0.20251001221443-fb4115d440f9
@@ -57,6 +58,10 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/spf13/viper v1.19.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
+	github.com/tidwall/gjson v1.18.0 // indirect
+	github.com/tidwall/match v1.1.1 // indirect
+	github.com/tidwall/pretty v1.2.1 // indirect
+	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/zeebo/xxh3 v1.0.2 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/exp v0.0.0-20250408133849-7e4ce0ab07d0 // indirect
@@ -80,9 +85,8 @@ require (
 	github.com/aws/smithy-go v1.22.1 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
-	github.com/sashabaranov/go-openai v1.36.1
 	github.com/vartanbeno/go-reddit/v2 v2.0.1
 	golang.org/x/crypto v0.41.0 // indirect
 	golang.org/x/net v0.43.0 // indirect; indirect`
-	golang.org/x/oauth2 v0.25.0 // indirect
+	golang.org/x/oauth2 v0.30.0 // indirect
 )

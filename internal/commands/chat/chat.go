@@ -144,7 +144,7 @@ func (c ChatCommand) MessageCommandHandler(event *events.ApplicationCommandInter
 	case "caveman-vc":
 		fallthrough
 	case "speak":
-
+		fallthrough
 	default:
 		slog.Warn("Unimplemented command", slog.String("command", event.Data.CommandName()))
 	}

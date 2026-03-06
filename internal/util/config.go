@@ -52,11 +52,11 @@ type Config struct {
 	AWS_PARAMETER_REDDIT_PASSWORD      string
 	AWS_PARAMETER_REDDIT_CLIENT_ID     string
 	AWS_PARAMETER_REDDIT_CLIENT_SECRET string
-	AWS_PARAMETER_OPENAI_KEY           string
+	AWS_PARAMETER_ANTHROPIC_KEY string
 
-	TERMINAL_REGEX string
-	STATISTICS_BOT string
-	OPENAI_KEY     string
+	TERMINAL_REGEX   string
+	STATISTICS_BOT   string
+	ANTHROPIC_API_KEY string
 
 	OLLAMA_URL       string
 	OLLAMA_MODEL     string
@@ -123,14 +123,14 @@ func init() {
 		AWS_PARAMETER_REDDIT_PASSWORD:      os.Getenv("AWS_PARAMETER_REDDIT_PASSWORD"),
 		AWS_PARAMETER_REDDIT_CLIENT_ID:     os.Getenv("AWS_PARAMETER_REDDIT_CLIENT_ID"),
 		AWS_PARAMETER_REDDIT_CLIENT_SECRET: os.Getenv("AWS_PARAMETER_REDDIT_CLIENT_SECRET"),
-		AWS_PARAMETER_OPENAI_KEY:           os.Getenv("AWS_PARAMETER_OPENAI_KEY"),
+		AWS_PARAMETER_ANTHROPIC_KEY:        os.Getenv("AWS_PARAMETER_ANTHROPIC_KEY"),
 		REDDIT_USERNAME:                    os.Getenv("REDDIT_USERNAME"),
 		REDDIT_PASSWORD:                    os.Getenv("REDDIT_PASSWORD"),
 		REDDIT_CLIENT_ID:                   os.Getenv("REDDIT_CLIENT_ID"),
 		REDDIT_CLIENT_SECRET:               os.Getenv("REDDIT_CLIENT_SECRET"),
 		TERMINAL_REGEX:                     os.Getenv("TERMINAL_REGEX"),
 		STATISTICS_BOT:                     os.Getenv("STATSBOT_URL"),
-		OPENAI_KEY:                         os.Getenv("OPENAI_KEY"),
+		ANTHROPIC_API_KEY:                  os.Getenv("ANTHROPIC_API_KEY"),
 		OLLAMA_URL:                         os.Getenv("OLLAMA_URL"),
 		OLLAMA_MODEL:                       os.Getenv("OLLAMA_MODEL"),
 		OLLAMA_AUTH_TYPE:                   os.Getenv("OLLAMA_AUTH_TYPE"),
@@ -303,14 +303,14 @@ func getAWSParameter(parameterName string) (string, error) {
 	return *out.Parameter.Value, err
 }
 
-func (c *Config) GetOpenAIKey() (string, error) {
-	if c.OPENAI_KEY == "" && c.AWS_PARAMETER_OPENAI_KEY == "" {
-		return "", fmt.Errorf("OPENAI_KEY is not defined")
+func (c *Config) GetAnthropicKey() (string, error) {
+	if c.ANTHROPIC_API_KEY == "" && c.AWS_PARAMETER_ANTHROPIC_KEY == "" {
+		return "", fmt.Errorf("ANTHROPIC_API_KEY is not defined")
 	}
-	if c.OPENAI_KEY != "" {
-		return c.OPENAI_KEY, nil
+	if c.ANTHROPIC_API_KEY != "" {
+		return c.ANTHROPIC_API_KEY, nil
 	}
-	return getAWSParameter(c.AWS_PARAMETER_OPENAI_KEY)
+	return getAWSParameter(c.AWS_PARAMETER_ANTHROPIC_KEY)
 }
 
 func (c *Config) SendStatsBotRequest(sqsObject Object) (Object, error) {

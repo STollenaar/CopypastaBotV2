@@ -2,12 +2,14 @@ package util
 
 import (
 	"bytes"
+	"context"
 	b64 "encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"time"
 )
 
 func CreateOllamaGeneration(prompt OllamaGenerateRequest) (OllamaGenerateResponse, error) {
@@ -16,9 +18,11 @@ func CreateOllamaGeneration(prompt OllamaGenerateRequest) (OllamaGenerateRespons
 	if err != nil {
 		return OllamaGenerateResponse{}, err
 	}
-	// os.WriteFile("req.json", data, 0644)
 
-	req, err := http.NewRequest("POST", fmt.Sprintf("http://%s/api/generate", ConfigFile.OLLAMA_URL), bytes.NewBuffer(data))
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("http://%s/api/generate", ConfigFile.OLLAMA_URL), bytes.NewBuffer(data))
 
 	if err != nil {
 		slog.Error("Error creating ollama request", slog.Any("err", err))

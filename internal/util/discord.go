@@ -2,12 +2,14 @@ package util
 
 import (
 	"bytes"
+	"context"
 	"crypto/ed25519"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/disgoorg/disgo/discord"
 )
@@ -64,7 +66,9 @@ func SendRequest(method, interactionID, interactionToken string, kind KIND, data
 		url = fmt.Sprintf(url, kind, interactionID, interactionToken)
 	}
 
-	req, err = http.NewRequest(method, url, bytes.NewBuffer(data))
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	req, err = http.NewRequestWithContext(ctx, method, url, bytes.NewBuffer(data))
 
 	if err != nil {
 		slog.Error("Error creating HTTP request", slog.Any("err", err))
@@ -109,7 +113,9 @@ func SendAsWebhook(data []byte) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequest("POST", fmt.Sprintf(WEBHOOK_POST_URL, webhook.id, webhook.token), bytes.NewBuffer(data))
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf(WEBHOOK_POST_URL, webhook.id, webhook.token), bytes.NewBuffer(data))
 
 	if err != nil {
 		slog.Error("Error creating webhook request", slog.Any("err", err))

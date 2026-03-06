@@ -5,49 +5,62 @@ import (
 	_ "embed"
 	"log"
 	"strings"
+	"time"
 
-	"github.com/sashabaranov/go-openai"
+	anthropic "github.com/anthropics/anthropic-sdk-go"
+	"github.com/anthropics/anthropic-sdk-go/option"
 )
 
+const claudeModel = "claude-sonnet-4-6"
+
 var (
-	chatGPTClient *openai.Client
+	claudeClient *anthropic.Client
 
 	//go:embed wrapSSML.txt
 	wrapPrompt string
 )
 
-func initChatGPT() {
-	openAIKey, err := ConfigFile.GetOpenAIKey()
+func initClaude() {
+	apiKey, err := ConfigFile.GetAnthropicKey()
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	chatGPTClient = openai.NewClient(openAIKey)
+	c := anthropic.NewClient(option.WithAPIKey(apiKey))
+	claudeClient = &c
 }
 
-func GetChatGPTResponse(systemPrompt, userInput, userID string) (openai.ChatCompletionResponse, error) {
-	if chatGPTClient == nil {
-		initChatGPT()
+func GetClaudeResponse(systemPrompt, userInput string) (string, error) {
+	if claudeClient == nil {
+		initClaude()
 	}
 
-	return chatGPTClient.CreateChatCompletion(context.TODO(), openai.ChatCompletionRequest{
-		Model: openai.GPT4oMini,
-		User:  userID,
-		Messages: []openai.ChatCompletionMessage{
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
+	msg, err := claudeClient.Messages.New(ctx, anthropic.MessageNewParams{
+		Model:     claudeModel,
+		MaxTokens: 1024,
+		System: []anthropic.TextBlockParam{
 			{
-				Role:    openai.ChatMessageRoleSystem,
-				Content: systemPrompt,
-			},
-			{
-				Role:    openai.ChatMessageRoleUser,
-				Content: userInput,
+				Text: systemPrompt,
 			},
 		},
-	})
+		Messages: []anthropic.MessageParam{
+			anthropic.NewUserMessage(anthropic.NewTextBlock(userInput)),
+		},
+	},
+)
+	if err != nil {
+		return "", err
+	}
+	if len(msg.Content) == 0 {
+		return "", nil
+	}
+	return msg.Content[0].Text, nil
 }
 
-func WrapIntoSSML(input, userID string) (openai.ChatCompletionResponse, error) {
-	return GetChatGPTResponse(wrapPrompt, escapeSSML(input), userID)
+func WrapIntoSSML(input, _ string) (string, error) {
+	return GetClaudeResponse(wrapPrompt, escapeSSML(input))
 }
 
 func escapeSSML(input string) string {

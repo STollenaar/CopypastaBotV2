@@ -273,21 +273,18 @@ func synthData(object util.Object, userID string, bot *bot.Client) {
 
 	contents := util.BreakContent(object.Data, 2950)
 	for i, content := range contents {
-		resp, err := util.WrapIntoSSML(content, "system")
 		textType := types.TextTypeText
 		engine := types.EngineNeural
-		if err != nil {
+		if ssml, err := util.WrapIntoSSML(content, "system"); err != nil {
 			slog.Error("Error wrapping into SSML", slog.Any("err", err))
 		} else {
-			content = resp.Choices[0].Message.Content
-			// if !strings.Contains(content, "<speak>") {
-			// 	content = "<speak>" + content + "</speak>"
-			// }
+			content = ssml
 			textType = types.TextTypeSsml
 			engine = types.EngineStandard
 		}
 		slog.Debug("Content to be synthesized", slog.String("content", content))
-		synthed, err := pollyClient.SynthesizeSpeech(context.TODO(), &polly.SynthesizeSpeechInput{
+		synthCtx, synthCancel := context.WithTimeout(context.Background(), 30*time.Second)
+		synthed, err := pollyClient.SynthesizeSpeech(synthCtx, &polly.SynthesizeSpeechInput{
 			Text:         aws.String(content),
 			TextType:     textType,
 			OutputFormat: types.OutputFormatMp3,
@@ -300,6 +297,7 @@ func synthData(object util.Object, userID string, bot *bot.Client) {
 			continue
 		}
 
+		synthCancel()
 		isLast := i == len(contents)-1
 		audioBytes, err := io.ReadAll(synthed.AudioStream)
 		synthed.AudioStream.Close()
@@ -390,14 +388,20 @@ func doSpeech(guildID string, bot *bot.Client) {
 
 	conn := bot.VoiceManager.CreateConn(snowflake.MustParse(guildID))
 
-	err = conn.Open(context.TODO(), *vs.ChannelID, false, false)
+	openCtx, openCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	err = conn.Open(openCtx, *vs.ChannelID, false, false)
+	openCancel()
 
 	// Stay connected between items; disconnect only when the queue is drained.
 	mu.Lock()
 	hasMore := len(queues[guildID]) > 0
 	mu.Unlock()
 	if !hasMore {
-		defer conn.Close(context.TODO())
+		defer func() {
+			closeCtx, closeCancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer closeCancel()
+			conn.Close(closeCtx)
+		}()
 	}
 
 	if err != nil {
@@ -408,7 +412,9 @@ func doSpeech(guildID string, bot *bot.Client) {
 	guildVC[guildID] = &conn
 	mu.Unlock()
 
-	err = conn.SetSpeaking(context.TODO(), voice.SpeakingFlagMicrophone)
+	speakCtx, speakCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	err = conn.SetSpeaking(speakCtx, voice.SpeakingFlagMicrophone)
+	speakCancel()
 	if err != nil {
 		slog.Error("Error setting speaking to true", slog.Any("err", err))
 	}
@@ -438,7 +444,9 @@ func doSpeech(guildID string, bot *bot.Client) {
 		}
 	}
 
-	err = conn.SetSpeaking(context.TODO(), voice.SpeakingFlagNone)
+	unSpeakCtx, unSpeakCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	err = conn.SetSpeaking(unSpeakCtx, voice.SpeakingFlagNone)
+	unSpeakCancel()
 	if err != nil {
 		slog.Error("Error setting speaking to false", slog.Any("err", err))
 	}

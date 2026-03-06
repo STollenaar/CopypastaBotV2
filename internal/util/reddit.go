@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/disgoorg/disgo/discord"
 	"github.com/vartanbeno/go-reddit/v2/reddit"
@@ -58,7 +59,9 @@ func DisplayRedditSubreddit(subreddit string) []*reddit.Post {
 	if redditClient == nil {
 		createRedditClient()
 	}
-	posts, _, err := redditClient.Subreddit.HotPosts(context.TODO(), subreddit, &reddit.ListOptions{})
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	posts, _, err := redditClient.Subreddit.HotPosts(ctx, subreddit, &reddit.ListOptions{})
 	if err != nil {
 		slog.Error("Error fetching hot posts for subreddit", slog.String("subreddit", subreddit), slog.Any("err", err))
 	}
@@ -70,7 +73,9 @@ func GetRedditPost(redditPostID string) *reddit.PostAndComments {
 	if redditClient == nil {
 		createRedditClient()
 	}
-	postCommnents, _, err := redditClient.Post.Get(context.TODO(), redditPostID)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	postCommnents, _, err := redditClient.Post.Get(ctx, redditPostID)
 	if err != nil {
 		slog.Error("Error fetching reddit post", slog.String("postID", redditPostID), slog.Any("err", err))
 	}
