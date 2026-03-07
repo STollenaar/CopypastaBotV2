@@ -33,16 +33,18 @@ func (p PastaCommand) Handler(event *events.ApplicationCommandInteractionCreate)
 	sub := event.SlashCommandInteractionData()
 
 	var redditPostID string
-	if argUrl, ok := sub.Options["url"]; ok {
-		if uri, err := url.ParseRequestURI(argUrl.String()); err == nil {
+
+	switch *sub.SubCommandName {
+	case "url":
+		if uri, err := url.ParseRequestURI(sub.Options["url"].String()); err == nil {
 			path := strings.Split(uri.Path, "/")
 			postID := findIndex(path, "comments")
 			redditPostID = path[postID+1]
 		}
+	case "redditpost":
+		redditPostID = sub.Options["postid"].String()
 	}
-	if postid, ok := sub.Options["postid"]; ok {
-		redditPostID = postid.String()
-	}
+
 	embeds := util.DisplayRedditPost(redditPostID, false)
 
 	_, err = event.Client().Rest.UpdateInteractionResponse(event.ApplicationID(), event.Token(), discord.MessageUpdate{
@@ -55,15 +57,27 @@ func (p PastaCommand) Handler(event *events.ApplicationCommandInteractionCreate)
 
 func (p PastaCommand) CreateCommandArguments() []discord.ApplicationCommandOption {
 	return []discord.ApplicationCommandOption{
-		discord.ApplicationCommandOptionString{
+		discord.ApplicationCommandOptionSubCommand{
 			Name:        "url",
-			Description: "URL of the reddit post",
-			Required:    false,
+			Description: "Run the speech from the text of a site",
+			Options: []discord.ApplicationCommandOption{
+				discord.ApplicationCommandOptionString{
+					Name:        "url",
+					Description: "URL of the page to make a markov chain from",
+					Required:    true,
+				},
+			},
 		},
-		discord.ApplicationCommandOptionString{
-			Name:        "postid",
-			Description: "The Reddit postID of the post",
-			Required:    false,
+		discord.ApplicationCommandOptionSubCommand{
+			Name:        "redditpost",
+			Description: "Speech from a reddit post",
+			Options: []discord.ApplicationCommandOption{
+				discord.ApplicationCommandOptionString{
+					Name:        "postid",
+					Description: "Reddit post ID",
+					Required:    true,
+				},
+			},
 		},
 	}
 }

@@ -92,5 +92,7 @@ func PingCommand(event *events.ApplicationCommandInteractionCreate) {
 		Content: "Pong",
 		Flags:   util.ConfigFile.SetEphemeral(),
 	})
-	slog.Error("Error sending pong", slog.Any("err", err.Error()))
+	if err != nil {
+		slog.Error("Error sending pong", slog.Any("err", err.Error()))
+	}
 }

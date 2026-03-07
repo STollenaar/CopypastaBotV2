@@ -109,10 +109,27 @@ func GetQueueItems(guildID string) []QueueItem {
 }
 
 // FlushQueue clears the pending queue for a guild without interrupting current playback.
+// It also removes the corresponding DB chunks and marks the speak_queue records as done
+// so they are not re-enqueued on restart.
 func FlushQueue(guildID string) {
 	mu.Lock()
-	defer mu.Unlock()
+	flushed := queues[guildID]
 	queues[guildID] = nil
+	mu.Unlock()
+
+	// Collect unique dbIDs so we only update each speak_queue row once.
+	seen := make(map[int64]bool)
+	for _, item := range flushed {
+		if err := database.DeleteSpeakChunk(item.chunkID); err != nil {
+			slog.Error("Error deleting chunk during flush", slog.Any("err", err))
+		}
+		if !seen[item.dbID] {
+			seen[item.dbID] = true
+			if err := database.SetSpeakItemStatus(item.dbID, "done"); err != nil {
+				slog.Error("Error marking speak item as done during flush", slog.Any("err", err))
+			}
+		}
+	}
 }
 
 // SkipCurrent signals the active playback goroutine for a guild to stop the current item.

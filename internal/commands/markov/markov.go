@@ -33,15 +33,16 @@ func (m MarkovCommand) Handler(event *events.ApplicationCommandInteractionCreate
 
 	var markovData string
 
-	if url, ok := sub.Options["url"]; ok {
-		markovData = HandleURL(url.String())
-	} else if user, ok := sub.Options["user"]; ok {
+	switch *sub.SubCommandName {
+	case "url":
+		markovData = HandleURL(sub.Options["url"].String())
+	case "user":
 		sqsMessage := util.Object{
 			GuildID:       event.GuildID().String(),
 			ApplicationID: event.ApplicationID().String(),
 			Command:       "markov",
 			Type:          "user",
-			Data:          user.Snowflake().String(),
+			Data:          sub.Options["user"].Snowflake().String(),
 			ChannelID:     event.Channel().ID().String(),
 			Token:         event.Token(),
 		}
@@ -64,15 +65,27 @@ func (m MarkovCommand) Handler(event *events.ApplicationCommandInteractionCreate
 
 func (m MarkovCommand) CreateCommandArguments() []discord.ApplicationCommandOption {
 	return []discord.ApplicationCommandOption{
-		discord.ApplicationCommandOptionString{
+		discord.ApplicationCommandOptionSubCommand{
 			Name:        "url",
-			Description: "URL of the page to make a markov chain from",
-			Required:    false,
+			Description: "Run the speech from the text of a site",
+			Options: []discord.ApplicationCommandOption{
+				discord.ApplicationCommandOptionString{
+					Name:        "url",
+					Description: "URL of the page to make a markov chain from",
+					Required:    true,
+				},
+			},
 		},
-		discord.ApplicationCommandOptionUser{
+		discord.ApplicationCommandOptionSubCommand{
 			Name:        "user",
-			Description: "User the create a markov chain of",
-			Required:    false,
+			Description: "Run the speech from one of the user messages",
+			Options: []discord.ApplicationCommandOption{
+				discord.ApplicationCommandOptionUser{
+					Name:        "user",
+					Description: "User to create a markov chain of",
+					Required:    true,
+				},
+			},
 		},
 	}
 }
