@@ -56,11 +56,6 @@ func init() {
 			}
 		}),
 		bot.WithEventListenerFunc(func(event *events.ComponentInteractionCreate) {
-			slog.Debug("component interaction",
-				slog.String("custom_id", event.Data.CustomID()),
-				slog.String("user_id", event.Member().User.ID.String()),
-				slog.String("guild_id", event.GuildID().String()),
-			)
 			commands.ComponentHandlers[strings.Split(event.Data.CustomID(), ";")[0]](event)
 		}),
 		// bot.WithEventListenerFunc(func(event *events.ModalSubmitInteractionCreate) {
