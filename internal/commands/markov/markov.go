@@ -1,6 +1,7 @@
 package markov
 
 import (
+	"errors"
 	"log/slog"
 
 	"github.com/disgoorg/disgo/discord"
@@ -52,7 +53,11 @@ func (m MarkovCommand) Handler(event *events.ApplicationCommandInteractionCreate
 			slog.Error("Error sending statsbot request", slog.Any("err", err))
 			return
 		}
-		markovData = HandleUser(resp.Data)
+		markovData = HandleUser(resp.Data...)
+	}
+
+	if markovData == "" {
+		markovData = "I couldn't generate anything from that."
 	}
 
 	_, err = event.Client().Rest.UpdateInteractionResponse(event.ApplicationID(), event.Token(), discord.MessageUpdate{
@@ -94,15 +99,21 @@ func HandleURL(input string) string {
 	data, err := pkgMarkov.GetMarkovURL(input)
 	if err != nil {
 		slog.Error("Error getting markov from URL", slog.Any("err", err))
+		if errors.Is(err, pkgMarkov.ErrInsufficientData) {
+			return "I couldn't find enough readable text on that page."
+		}
 		return err.Error()
 	}
 	return data
 }
 
-func HandleUser(input string) string {
-	data, err := pkgMarkov.GetUserMarkov(input)
+func HandleUser(messages ...string) string {
+	data, err := pkgMarkov.GetUserMarkov(messages...)
 	if err != nil {
 		slog.Error("Error getting user markov", slog.Any("err", err))
+		if errors.Is(err, pkgMarkov.ErrInsufficientData) {
+			return "That user hasn't said enough for me to imitate them yet."
+		}
 		return err.Error()
 	}
 	return data

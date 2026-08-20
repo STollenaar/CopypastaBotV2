@@ -52,6 +52,11 @@ func createRedditClient() {
 }
 
 func IsTerminalWord(word string) bool {
+	// re is nil when TERMINAL_REGEX failed to compile; treat every word as
+	// non-terminal instead of panicking on every caller.
+	if re == nil {
+		return false
+	}
 	return re.MatchString(word)
 }
 

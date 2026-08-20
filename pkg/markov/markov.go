@@ -1,133 +1,320 @@
+// Package markovpkg builds order-N markov chains out of raw text, local files
+// or web pages, and generates new sentences from them.
 package markovpkg
 
 import (
-	"bytes"
 	"errors"
+	"fmt"
 	"io"
-	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/stollenaar/copypastabotv2/internal/util"
 
 	"github.com/PuerkitoBio/goquery"
 )
 
-type markov struct {
-	states map[[2]string][]string
+// ErrInsufficientData is returned when the parsed corpus is too small to
+// generate anything from.
+var ErrInsufficientData = errors.New("not enough text to build a markov chain")
+
+const (
+	defaultOrder    = 2
+	defaultMinWords = 8
+	defaultMaxWords = 150
+	// Discord rejects messages over 2000 characters, so stay well under it.
+	defaultMaxChars = 1900
+
+	// generateAttempts is how often Generate re-walks the chain looking for a
+	// result that reaches minWords before settling for the longest walk it saw.
+	generateAttempts = 12
+
+	// prefixSeparator joins the words of a prefix into a map key. A NUL byte
+	// never survives whitespace tokenization, so keys stay unambiguous.
+	prefixSeparator = "\x00"
+
+	// endMarker is recorded as the suffix of a segment's final prefix. Drawing
+	// it ends the walk, which lets a sentence stop where a real message stopped
+	// even when that message had no closing punctuation.
+	endMarker = "\x00end"
+)
+
+// Chain is an order-N markov chain. The zero value is not usable; call New.
+type Chain struct {
+	order    int
+	minWords int
+	maxWords int
+	maxChars int
+
+	// states maps a prefix of `order` words to every word ever observed after
+	// it. Repeats are kept, so picking uniformly reproduces source frequencies.
+	states map[string][]string
+	// starts holds the prefixes that opened a sentence. Walks begin at one of
+	// these so output does not start mid-clause.
+	starts []string
 }
 
-func New() *markov {
-	return &markov{}
+// Option customises a Chain built by New.
+type Option func(*Chain)
+
+// WithOrder sets how many words of context a prefix carries. Higher orders
+// stay closer to the source text; lower orders wander more.
+func WithOrder(order int) Option {
+	return func(c *Chain) { c.order = order }
 }
 
-func (m *markov) ReadText(text string) string {
-	m.parse(text)
-
-	return m.generate()
+// WithMinWords sets the length a walk must reach before a terminal word is
+// allowed to end it.
+func WithMinWords(words int) Option {
+	return func(c *Chain) { c.minWords = words }
 }
 
-func (m *markov) ReadFile(filePath string) string {
-	// Open the file
-	file, err := os.Open(filePath)
-	if err != nil {
-		log.Fatal(err)
+// WithMaxWords caps how long a generated sentence may get.
+func WithMaxWords(words int) Option {
+	return func(c *Chain) { c.maxWords = words }
+}
+
+// WithMaxChars caps the generated sentence in characters.
+func WithMaxChars(chars int) Option {
+	return func(c *Chain) { c.maxChars = chars }
+}
+
+// New returns an empty chain ready to be fed text.
+func New(opts ...Option) *Chain {
+	c := &Chain{
+		order:    defaultOrder,
+		minWords: defaultMinWords,
+		maxWords: defaultMaxWords,
+		maxChars: defaultMaxChars,
+		states:   make(map[string][]string),
+	}
+	for _, opt := range opts {
+		opt(c)
 	}
 
-	// Read data from the file
-	text, err := io.ReadAll(file)
-	if err != nil {
-		log.Fatal(err)
+	// Clamp nonsensical options rather than panicking deep inside a walk.
+	if c.order < 1 {
+		c.order = defaultOrder
 	}
-
-	m.parse(string(text))
-
-	return m.generate()
+	if c.minWords < c.order {
+		c.minWords = c.order
+	}
+	if c.maxWords < c.minWords {
+		c.maxWords = c.minWords
+	}
+	if c.maxChars < 1 {
+		c.maxChars = defaultMaxChars
+	}
+	return c
 }
 
-func (m *markov) ReadURL(URL string) (string, error) {
-	// Open web page
-	res, err := http.Get(URL)
-	if err != nil {
-		log.Fatal(err)
+// Parse folds one segment of text into the chain. A segment is a self-contained
+// unit -- a single chat message, a paragraph, a document -- and the chain never
+// walks from the tail of one segment into the head of another. Feeding several
+// messages as one segment is what makes output read like two unrelated
+// sentences welded together.
+//
+// Parse is additive: calling it repeatedly builds a single chain spanning the
+// whole corpus. Recombination still happens across segments, but only where
+// they genuinely share a prefix, which is the recombination worth having.
+func (c *Chain) Parse(text string) {
+	words := strings.Fields(text)
+	if len(words) <= c.order {
+		return
 	}
-	defer func() {
-		err := res.Body.Close()
-		if err != nil {
-			log.Fatal(err)
+
+	for i := 0; i+c.order < len(words); i++ {
+		key := strings.Join(words[i:i+c.order], prefixSeparator)
+
+		// The first prefix, and any prefix following a terminal word, is a
+		// place a sentence can legitimately start.
+		if i == 0 || util.IsTerminalWord(words[i-1]) {
+			c.starts = append(c.starts, key)
 		}
-	}()
-
-	doc, err := goquery.NewDocumentFromReader(res.Body)
-	if err != nil {
-		log.Fatal(err)
+		c.states[key] = append(c.states[key], words[i+c.order])
 	}
 
-	// Search for <p></p> under <article></article> tags
-	doc.Find("article").Each(func(i int, s *goquery.Selection) {
-		text := s.Find("p").Text()
-		m.parse(text)
-	})
-	if len(m.states) < 10 {
-		return "", errors.New("article from URL couldn't be parsed")
-	}
-
-	return m.generate(), nil
+	// Record where the segment ran out, so a walk can stop here even if the
+	// last word carries no punctuation.
+	last := strings.Join(words[len(words)-c.order:], prefixSeparator)
+	c.states[last] = append(c.states[last], endMarker)
 }
 
-func (m *markov) StateDictionary() map[[2]string][]string {
-	return m.states
-}
-
-// Parse input text into states map
-func (m *markov) parse(text string) {
-	// Initialize markov.states map
-	m.states = make(map[[2]string][]string)
-
-	words := strings.Split(text, " ")
-
-	for i := 0; i < len(words)-2; i++ {
-		// Initialize prefix with two consecutive words as the key
-		prefix := [2]string{words[i], words[i+1]}
-
-		// Assign the third word as value to the prefix
-		m.states[prefix] = append(m.states[prefix], words[i+2])
+// ParseSegments folds each segment into the chain independently. Empty and
+// too-short segments are skipped.
+func (c *Chain) ParseSegments(segments ...string) {
+	for _, segment := range segments {
+		c.Parse(segment)
 	}
 }
 
-// Generate markov senetence based on a given length
-func (m *markov) generate() string {
-	var sentence bytes.Buffer
+// Reset drops everything parsed so far.
+func (c *Chain) Reset() {
+	c.states = make(map[string][]string)
+	c.starts = nil
+}
 
-	// Initialize prefix with a random key
-	prefix := m.getRandomPrefix([2]string{"", ""})
-	sentence.WriteString(strings.Join(prefix[:], " ") + " ")
+// StateDictionary exposes the prefix -> suffixes map. Keys are the prefix words
+// joined by prefixSeparator, and a suffix may be endMarker.
+func (c *Chain) StateDictionary() map[string][]string {
+	return c.states
+}
 
-	for {
-		suffix := getRandomWord(m.states[prefix])
-		sentence.WriteString(suffix + " ")
+// Generate walks the chain and returns a new sentence.
+func (c *Chain) Generate() (string, error) {
+	if len(c.starts) == 0 {
+		return "", ErrInsufficientData
+	}
 
-		// Break the loop if suffix ends in "." and sentenceLength is enough
-		if util.IsTerminalWord(suffix) {
+	// Short or dead-end walks are common on small corpora, so retry a handful
+	// of times before settling for the best one seen.
+	var longest []string
+	for range generateAttempts {
+		words := c.walk()
+		if len(words) >= c.minWords {
+			return strings.Join(words, " "), nil
+		}
+		if len(words) > len(longest) {
+			longest = words
+		}
+	}
+
+	if len(longest) == 0 {
+		return "", ErrInsufficientData
+	}
+	return strings.Join(longest, " "), nil
+}
+
+// walk produces one sentence, starting from a random sentence opening and
+// stopping at a terminal word, a dead end, or one of the configured caps.
+func (c *Chain) walk() []string {
+	prefix := strings.Split(randomString(c.starts), prefixSeparator)
+
+	words := make([]string, 0, c.maxWords)
+	words = append(words, prefix...)
+	chars := len(strings.Join(words, " "))
+
+	for len(words) < c.maxWords {
+		next := randomString(c.states[strings.Join(prefix, prefixSeparator)])
+		if next == "" || next == endMarker {
+			// Either a dead end, or a prefix that ended one of the segments.
 			break
 		}
 
-		prefix = [2]string{prefix[1], suffix}
-	}
-
-	return sentence.String()
-}
-
-// Return a random prefix other than the one in the arguments
-func (m *markov) getRandomPrefix(prefix [2]string) [2]string {
-	// By default, Go orders keys randomly for maps
-	for key := range m.states {
-		if key != prefix {
-			prefix = key
+		words = append(words, next)
+		chars += len(next) + 1
+		if chars >= c.maxChars {
 			break
 		}
+		if len(words) >= c.minWords && util.IsTerminalWord(next) {
+			break
+		}
+
+		// Slide the window: drop the oldest word, append the new one. prefix
+		// has its own backing array, so this cannot corrupt words.
+		copy(prefix, prefix[1:])
+		prefix[len(prefix)-1] = next
 	}
 
-	return prefix
+	return words
+}
+
+// ReadText parses text and immediately generates from it. Each line is treated
+// as its own segment, so a newline-delimited corpus (a user's chat history, for
+// instance) does not chain across message boundaries. Text without newlines is
+// a single segment.
+func (c *Chain) ReadText(text string) (string, error) {
+	c.ParseSegments(strings.Split(text, "\n")...)
+	return c.Generate()
+}
+
+// ReadFile parses the contents of filePath as a single segment and generates
+// from it.
+func (c *Chain) ReadFile(filePath string) (string, error) {
+	text, err := os.ReadFile(filePath)
+	if err != nil {
+		return "", fmt.Errorf("reading %s: %w", filePath, err)
+	}
+
+	c.Parse(string(text))
+	return c.Generate()
+}
+
+// ReadURL fetches a web page, parses its article text and generates from it.
+func (c *Chain) ReadURL(rawURL string) (string, error) {
+	if err := c.ParseURL(rawURL); err != nil {
+		return "", err
+	}
+	return c.Generate()
+}
+
+const (
+	fetchTimeout = 15 * time.Second
+	// maxBodyBytes bounds how much of a remote page is read into memory.
+	maxBodyBytes = 4 << 20
+	// minStates is the point at which a selector is considered to have found
+	// real body copy rather than a stray caption or cookie banner.
+	minStates = 10
+	userAgent = "copypastabot/2.0 (+https://github.com/stollenaar/copypastabotv2)"
+)
+
+var httpClient = &http.Client{Timeout: fetchTimeout}
+
+// ParseURL fetches rawURL and folds its article text into the chain.
+func (c *Chain) ParseURL(rawURL string) error {
+	u, err := url.ParseRequestURI(rawURL)
+	if err != nil {
+		return fmt.Errorf("invalid url: %w", err)
+	}
+	// The URL comes straight from a slash command, so refuse anything the
+	// http client would treat as an exotic transport.
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return fmt.Errorf("unsupported url scheme %q", u.Scheme)
+	}
+
+	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("User-Agent", userAgent)
+
+	res, err := httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("fetching %s: %w", u.Host, err)
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusMultipleChoices {
+		return fmt.Errorf("fetching %s: unexpected status %s", u.Host, res.Status)
+	}
+	if ct := res.Header.Get("Content-Type"); ct != "" && !strings.Contains(ct, "html") {
+		return fmt.Errorf("%s served %q, expected HTML", u.Host, ct)
+	}
+
+	doc, err := goquery.NewDocumentFromReader(io.LimitReader(res.Body, maxBodyBytes))
+	if err != nil {
+		return fmt.Errorf("parsing %s: %w", u.Host, err)
+	}
+
+	// Prefer real article copy, fall back to the main content area, then to any
+	// paragraph on the page. Each <p> is parsed on its own so chains never run
+	// across a paragraph boundary.
+	selectors := []string{"article p", "main p", "p"}
+	for i, selector := range selectors {
+		doc.Find(selector).Each(func(_ int, s *goquery.Selection) {
+			c.Parse(s.Text())
+		})
+		if len(c.states) >= minStates || i == len(selectors)-1 {
+			break
+		}
+		c.Reset()
+	}
+
+	if len(c.starts) == 0 {
+		return fmt.Errorf("%w: no readable article text at %s", ErrInsufficientData, u.Host)
+	}
+	return nil
 }

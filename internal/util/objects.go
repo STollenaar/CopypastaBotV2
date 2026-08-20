@@ -22,6 +22,20 @@ type Object struct {
 	ApplicationID string `json:"applicationID"`
 }
 
+// UserMessagesResponse is the statistics bot's reply to /userMessages. Data
+// holds one entry per message rather than a single joined string: a markov
+// chain needs to know where each message ended, otherwise it runs from the tail
+// of one message straight into the head of the next.
+type UserMessagesResponse struct {
+	Type          string   `json:"type"`
+	Command       string   `json:"command"`
+	Data          []string `json:"data"`
+	ChannelID     string   `json:"channelID"`
+	GuildID       string   `json:"guildID"`
+	Token         string   `json:"token"`
+	ApplicationID string   `json:"applicationID"`
+}
+
 // MessageObject general messageobject for functions
 type MessageObject struct {
 	GuildID   string            `bson:"GuildID" json:"GuildID"`

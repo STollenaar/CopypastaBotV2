@@ -23,3 +23,4 @@ vendor/
 copypastabot.db
 copypastabot.db.wal
 TODO.md
+cmd/copypastabotv2/__debug_*

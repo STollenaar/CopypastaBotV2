@@ -8,7 +8,6 @@ import (
 	"io"
 	"log"
 	"log/slog"
-	"net"
 	"net/http"
 	"os"
 	"runtime/debug"
@@ -52,10 +51,10 @@ type Config struct {
 	AWS_PARAMETER_REDDIT_PASSWORD      string
 	AWS_PARAMETER_REDDIT_CLIENT_ID     string
 	AWS_PARAMETER_REDDIT_CLIENT_SECRET string
-	AWS_PARAMETER_ANTHROPIC_KEY string
+	AWS_PARAMETER_ANTHROPIC_KEY        string
 
-	TERMINAL_REGEX   string
-	STATISTICS_BOT   string
+	TERMINAL_REGEX    string
+	STATISTICS_BOT    string
 	ANTHROPIC_API_KEY string
 
 	OLLAMA_URL       string
@@ -76,25 +75,6 @@ type Config struct {
 var (
 	ssmClient  *ssm.Client
 	ConfigFile *Config
-
-	dnsResolverIP        = "100.100.100.100:53" // Tailscale DNS resolver.
-	dnsResolverProto     = "tcp"                // Protocol to use for the DNS resolver
-	dnsResolverTimeoutMs = 5000
-
-	dialer = &net.Dialer{
-		Resolver: &net.Resolver{
-			PreferGo: true,
-			Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
-				d := net.Dialer{
-					Timeout: time.Duration(dnsResolverTimeoutMs) * time.Millisecond,
-				}
-				return d.DialContext(ctx, dnsResolverProto, dnsResolverIP)
-			},
-		},
-	}
-	dialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
-		return dialer.DialContext(ctx, network, addr)
-	}
 )
 
 // initializing the main config file
@@ -313,18 +293,17 @@ func (c *Config) GetAnthropicKey() (string, error) {
 	return getAWSParameter(c.AWS_PARAMETER_ANTHROPIC_KEY)
 }
 
-func (c *Config) SendStatsBotRequest(sqsObject Object) (Object, error) {
+func (c *Config) SendStatsBotRequest(sqsObject Object) (UserMessagesResponse, error) {
 	jsonData, err := json.Marshal(sqsObject)
 	if err != nil {
-		return Object{}, err
+		return UserMessagesResponse{}, err
 	}
 	bodyReader := bytes.NewReader(jsonData)
 
-	http.DefaultTransport.(*http.Transport).DialContext = dialContext
-	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("https://%s/userMessages", c.STATISTICS_BOT), bodyReader)
+	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("http://%s/userMessages", c.STATISTICS_BOT), bodyReader)
 
 	if err != nil {
-		return Object{}, err
+		return UserMessagesResponse{}, err
 	}
 	req.Header.Set("Content-Type", "application/json")
 
@@ -336,17 +315,32 @@ func (c *Config) SendStatsBotRequest(sqsObject Object) (Object, error) {
 
 	res, err := client.Do(req)
 	if err != nil {
-		return Object{}, err
+		return UserMessagesResponse{}, err
 	}
-	body, _ := io.ReadAll(res.Body)
-	var object Object
-	err = json.Unmarshal(body, &object)
+	defer res.Body.Close()
+
+	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		slog.Error("Error unmarshaling", slog.Any("err", err))
+		return UserMessagesResponse{}, fmt.Errorf("error reading statistics bot response: %w", err)
 	}
 
-	slog.Debug("Response body", slog.String("body", string(body)))
-	return object, err
+	slog.Debug("Response body", slog.Int("status", res.StatusCode), slog.String("body", string(body)))
+
+	if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusMultipleChoices {
+		snippet := string(body)
+		if len(snippet) > 512 {
+			snippet = snippet[:512] + "..."
+		}
+		return UserMessagesResponse{}, fmt.Errorf("statistics bot returned status %s: %s", res.Status, snippet)
+	}
+
+	var response UserMessagesResponse
+	if err := json.Unmarshal(body, &response); err != nil {
+		slog.Error("Error unmarshaling", slog.Any("err", err))
+		return UserMessagesResponse{}, fmt.Errorf("error unmarshaling statistics bot response: %w", err)
+	}
+
+	return response, nil
 }
 
 func GetOllamaUsername() (string, error) {

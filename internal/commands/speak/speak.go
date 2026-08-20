@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -178,11 +179,12 @@ func (s SpeakCommand) Handler(event *events.ApplicationCommandInteractionCreate)
 
 		speakObject.Data = user.String()
 		resp, err := util.ConfigFile.SendStatsBotRequest(speakObject)
-		speakObject.Data = resp.Data
 		if err != nil {
 			slog.Error("Encountered an error while processing the speak command", slog.Any("err", err))
 			return
 		}
+		// Polly wants one blob; newlines keep the messages from running together.
+		speakObject.Data = strings.Join(resp.Data, "\n")
 	case "redditpost":
 		redditPost := sub.Options["postid"].String()
 		speakObject.Data = redditPost
