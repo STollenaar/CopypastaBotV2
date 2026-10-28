@@ -2,7 +2,6 @@ package util
 
 import (
 	"bytes"
-	"context"
 	b64 "encoding/base64"
 	"encoding/json"
 	"errors"
@@ -18,63 +17,69 @@ func CreateOllamaGeneration(prompt OllamaGenerateRequest) (OllamaGenerateRespons
 	if err != nil {
 		return OllamaGenerateResponse{}, err
 	}
+	// os.WriteFile("req.json", data, 0644)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
-	defer cancel()
-
-	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("http://%s/api/generate", ConfigFile.OLLAMA_URL), bytes.NewBuffer(data))
+	req, err := http.NewRequest("POST", fmt.Sprintf("http://%s", ConfigFile.OLLAMA_URL), bytes.NewBuffer(data))
 
 	if err != nil {
-		slog.Error("Error creating ollama request", slog.Any("err", err))
+		slog.Error("ollama request error", slog.Any("err", err))
 		return OllamaGenerateResponse{}, err
 	}
 	req.Header.Add("Content-Type", "application/json")
 
-	switch ConfigFile.OLLAMA_AUTH_TYPE {
-	case "basic":
-		username, err := GetOllamaUsername()
-		if err != nil {
-			slog.Error("Error getting ollama username", slog.Any("err", err))
-			return OllamaGenerateResponse{}, err
-		}
-
-		password, err := GetOllamaPassword()
-		if err != nil {
-			slog.Error("Error getting ollama password", slog.Any("err", err))
-			return OllamaGenerateResponse{}, err
-		}
-
-		token := b64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", username, password)))
-		req.Header.Add("Authorization", fmt.Sprintf("Basic %s", token))
-	}
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		slog.Error("Error sending ollama request", slog.Any("err", err))
+	if err := setOllamaAuth(req); err != nil {
+		slog.Error("ollama request error", slog.Any("err", err))
 		return OllamaGenerateResponse{}, err
 	}
+
+	client := &http.Client{
+		Timeout: 30 * time.Minute,
+	}
+	resp, err := client.Do(req)
+
+	if err != nil {
+		slog.Error("ollama request error", slog.Any("err", err))
+		return OllamaGenerateResponse{}, err
+	}
+
+	defer resp.Body.Close()
 
 	var bodyData string
 	if resp != nil {
 		buf := new(bytes.Buffer)
-		_, err := buf.ReadFrom(resp.Body)
-		if err != nil {
-			slog.Error("Error reading body", slog.Any("err", err))
-		}
-
+		buf.ReadFrom(resp.Body)
 		bodyData = buf.String()
 	}
 	if resp.StatusCode != 200 {
-		slog.Error("Non-200 response from ollama", slog.String("body", bodyData))
+		slog.Error("ollama request returned non-200", slog.Int("status", resp.StatusCode), slog.String("body", bodyData))
 		return OllamaGenerateResponse{}, errors.New(bodyData)
 	}
 
 	var r OllamaGenerateResponse
 	err = json.Unmarshal([]byte(bodyData), &r)
-	if err != nil {
-		slog.Error("Error unmarshaling", slog.Any("err", err))
-	}
+	return r, err
+}
 
-	return r, nil
+// setOllamaAuth applies the configured auth scheme to an Ollama request.
+func setOllamaAuth(req *http.Request) error {
+	switch ConfigFile.OLLAMA_AUTH_TYPE {
+	case "basic":
+		username, err := GetOllamaUsername()
+		if err != nil {
+			return err
+		}
+		password, err := GetOllamaPassword()
+		if err != nil {
+			return err
+		}
+		token := b64.StdEncoding.EncodeToString(fmt.Appendf(nil, "%s:%s", username, password))
+		req.Header.Add("Authorization", fmt.Sprintf("Basic %s", token))
+	case "api_key":
+		token, err := GetOllamaAPIKey()
+		if err != nil {
+			return err
+		}
+		req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", token))
+	}
+	return nil
 }

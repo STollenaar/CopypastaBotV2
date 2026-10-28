@@ -58,13 +58,16 @@ type Config struct {
 	ANTHROPIC_API_KEY string
 
 	OLLAMA_URL       string
-	OLLAMA_MODEL     string
 	OLLAMA_AUTH_TYPE string
+	OLLAMA_MODEL     string
 
 	AWS_OLLAMA_AUTH_USERNAME string
 	OLLAMA_AUTH_USERNAME     string
 	AWS_OLLAMA_AUTH_PASSWORD string
 	OLLAMA_AUTH_PASSWORD     string
+
+	OLLAMA_API_KEY     string
+	AWS_OLLAMA_API_KEY string
 
 	DUCKDB_PATH string
 	HEALTH_PORT string
@@ -116,8 +119,10 @@ func init() {
 		OLLAMA_AUTH_TYPE:                   os.Getenv("OLLAMA_AUTH_TYPE"),
 		OLLAMA_AUTH_USERNAME:               os.Getenv("OLLAMA_AUTH_USERNAME"),
 		OLLAMA_AUTH_PASSWORD:               os.Getenv("OLLAMA_AUTH_PASSWORD"),
+		OLLAMA_API_KEY:                     os.Getenv("OLLAMA_API_KEY"),
 		AWS_OLLAMA_AUTH_USERNAME:           os.Getenv("AWS_OLLAMA_AUTH_USERNAME"),
 		AWS_OLLAMA_AUTH_PASSWORD:           os.Getenv("AWS_OLLAMA_AUTH_PASSWORD"),
+		AWS_OLLAMA_API_KEY:                 os.Getenv("AWS_OLLAMA_API_KEY"),
 		DUCKDB_PATH:                        os.Getenv("DUCKDB_PATH"),
 		HEALTH_PORT:                        os.Getenv("HEALTH_PORT"),
 		ADMIN_USER_ID:                      os.Getenv("ADMIN_USER_ID"),
@@ -345,7 +350,8 @@ func (c *Config) SendStatsBotRequest(sqsObject Object) (UserMessagesResponse, er
 
 func GetOllamaUsername() (string, error) {
 	if ConfigFile.OLLAMA_AUTH_USERNAME == "" && ConfigFile.AWS_OLLAMA_AUTH_USERNAME == "" {
-		log.Fatal("OLLAMA_AUTH_USERNAME or AWS_OLLAMA_AUTH_USERNAME is not set")
+		slog.Error("OLLAMA_AUTH_USERNAME or AWS_OLLAMA_AUTH_USERNAME is not set")
+		os.Exit(1)
 	}
 
 	if ConfigFile.OLLAMA_AUTH_USERNAME != "" {
@@ -356,7 +362,8 @@ func GetOllamaUsername() (string, error) {
 
 func GetOllamaPassword() (string, error) {
 	if ConfigFile.OLLAMA_AUTH_PASSWORD == "" && ConfigFile.AWS_OLLAMA_AUTH_PASSWORD == "" {
-		log.Fatal("OLLAMA_AUTH_PASSWORD or AWS_OLLAMA_AUTH_PASSWORD is not set")
+		slog.Error("OLLAMA_AUTH_PASSWORD or AWS_OLLAMA_AUTH_PASSWORD is not set")
+		os.Exit(1)
 	}
 
 	if ConfigFile.OLLAMA_AUTH_PASSWORD != "" {
@@ -364,6 +371,19 @@ func GetOllamaPassword() (string, error) {
 	}
 
 	return getAWSParameter(ConfigFile.AWS_OLLAMA_AUTH_PASSWORD)
+}
+
+func GetOllamaAPIKey() (string, error) {
+	if ConfigFile.OLLAMA_API_KEY == "" && ConfigFile.AWS_OLLAMA_API_KEY == "" {
+		slog.Error("OLLAMA_API_KEY or OLLAMA_API_KEY is not set")
+		os.Exit(1)
+	}
+
+	if ConfigFile.OLLAMA_API_KEY != "" {
+		return ConfigFile.OLLAMA_API_KEY, nil
+	}
+
+	return getAWSParameter(ConfigFile.AWS_OLLAMA_API_KEY)
 }
 
 func (c *Config) SetEphemeral() discord.MessageFlags {
