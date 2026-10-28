@@ -2,7 +2,6 @@ package chat
 
 import (
 	_ "embed"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 
@@ -169,31 +168,13 @@ func GetLLMResponse(promptName, message, userID string) (out ChatResponse, err e
 		prompt = systemPromptSpeak
 	}
 	prompt = fmt.Sprintf(prompt, userID)
-	resp, err := util.CreateOllamaGeneration(util.OllamaGenerateRequest{
-		Model:  util.ConfigFile.OLLAMA_MODEL,
-		Prompt: prompt,
-		Stream: false,
-		Format: map[string]interface{}{
-			"type": "object",
-			"properties": map[string]interface{}{
-				"response": map[string]interface{}{
-					"type": "string",
-				},
-			},
-			"required": []string{
-				"response",
-			},
-		},
-	})
-
+	resp, err := util.CreateLLMCompletion(prompt, message)
 	if err != nil {
-		slog.Error("Error generating ollama response", slog.Any("err", err))
+		slog.Error("Error generating LLM response", slog.Any("err", err))
 		return ChatResponse{
 			Response: "Generation error happened",
 		}, nil
 	}
 
-	err = json.Unmarshal([]byte(resp.Response), &out)
-	return
-
+	return ChatResponse{Response: resp}, nil
 }

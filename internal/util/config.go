@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -57,17 +58,10 @@ type Config struct {
 	STATISTICS_BOT    string
 	ANTHROPIC_API_KEY string
 
-	OLLAMA_URL       string
-	OLLAMA_AUTH_TYPE string
-	OLLAMA_MODEL     string
-
-	AWS_OLLAMA_AUTH_USERNAME string
-	OLLAMA_AUTH_USERNAME     string
-	AWS_OLLAMA_AUTH_PASSWORD string
-	OLLAMA_AUTH_PASSWORD     string
-
-	OLLAMA_API_KEY     string
-	AWS_OLLAMA_API_KEY string
+	LITELLM_URL         string
+	LITELLM_MODEL       string
+	LITELLM_API_KEY     string
+	AWS_LITELLM_API_KEY string
 
 	DUCKDB_PATH string
 	HEALTH_PORT string
@@ -114,15 +108,10 @@ func init() {
 		TERMINAL_REGEX:                     os.Getenv("TERMINAL_REGEX"),
 		STATISTICS_BOT:                     os.Getenv("STATSBOT_URL"),
 		ANTHROPIC_API_KEY:                  os.Getenv("ANTHROPIC_API_KEY"),
-		OLLAMA_URL:                         os.Getenv("OLLAMA_URL"),
-		OLLAMA_MODEL:                       os.Getenv("OLLAMA_MODEL"),
-		OLLAMA_AUTH_TYPE:                   os.Getenv("OLLAMA_AUTH_TYPE"),
-		OLLAMA_AUTH_USERNAME:               os.Getenv("OLLAMA_AUTH_USERNAME"),
-		OLLAMA_AUTH_PASSWORD:               os.Getenv("OLLAMA_AUTH_PASSWORD"),
-		OLLAMA_API_KEY:                     os.Getenv("OLLAMA_API_KEY"),
-		AWS_OLLAMA_AUTH_USERNAME:           os.Getenv("AWS_OLLAMA_AUTH_USERNAME"),
-		AWS_OLLAMA_AUTH_PASSWORD:           os.Getenv("AWS_OLLAMA_AUTH_PASSWORD"),
-		AWS_OLLAMA_API_KEY:                 os.Getenv("AWS_OLLAMA_API_KEY"),
+		LITELLM_URL:                        os.Getenv("LITELLM_URL"),
+		LITELLM_MODEL:                      os.Getenv("LITELLM_MODEL"),
+		LITELLM_API_KEY:                    os.Getenv("LITELLM_API_KEY"),
+		AWS_LITELLM_API_KEY:                os.Getenv("AWS_LITELLM_API_KEY"),
 		DUCKDB_PATH:                        os.Getenv("DUCKDB_PATH"),
 		HEALTH_PORT:                        os.Getenv("HEALTH_PORT"),
 		ADMIN_USER_ID:                      os.Getenv("ADMIN_USER_ID"),
@@ -348,42 +337,14 @@ func (c *Config) SendStatsBotRequest(sqsObject Object) (UserMessagesResponse, er
 	return response, nil
 }
 
-func GetOllamaUsername() (string, error) {
-	if ConfigFile.OLLAMA_AUTH_USERNAME == "" && ConfigFile.AWS_OLLAMA_AUTH_USERNAME == "" {
-		slog.Error("OLLAMA_AUTH_USERNAME or AWS_OLLAMA_AUTH_USERNAME is not set")
-		os.Exit(1)
+func GetLiteLLMAPIKey() (string, error) {
+	if ConfigFile.LITELLM_API_KEY != "" {
+		return ConfigFile.LITELLM_API_KEY, nil
 	}
-
-	if ConfigFile.OLLAMA_AUTH_USERNAME != "" {
-		return ConfigFile.OLLAMA_AUTH_USERNAME, nil
+	if ConfigFile.AWS_LITELLM_API_KEY == "" {
+		return "", errors.New("LITELLM_API_KEY or AWS_LITELLM_API_KEY is not set")
 	}
-	return getAWSParameter(ConfigFile.AWS_OLLAMA_AUTH_USERNAME)
-}
-
-func GetOllamaPassword() (string, error) {
-	if ConfigFile.OLLAMA_AUTH_PASSWORD == "" && ConfigFile.AWS_OLLAMA_AUTH_PASSWORD == "" {
-		slog.Error("OLLAMA_AUTH_PASSWORD or AWS_OLLAMA_AUTH_PASSWORD is not set")
-		os.Exit(1)
-	}
-
-	if ConfigFile.OLLAMA_AUTH_PASSWORD != "" {
-		return ConfigFile.OLLAMA_AUTH_PASSWORD, nil
-	}
-
-	return getAWSParameter(ConfigFile.AWS_OLLAMA_AUTH_PASSWORD)
-}
-
-func GetOllamaAPIKey() (string, error) {
-	if ConfigFile.OLLAMA_API_KEY == "" && ConfigFile.AWS_OLLAMA_API_KEY == "" {
-		slog.Error("OLLAMA_API_KEY or OLLAMA_API_KEY is not set")
-		os.Exit(1)
-	}
-
-	if ConfigFile.OLLAMA_API_KEY != "" {
-		return ConfigFile.OLLAMA_API_KEY, nil
-	}
-
-	return getAWSParameter(ConfigFile.AWS_OLLAMA_API_KEY)
+	return getAWSParameter(ConfigFile.AWS_LITELLM_API_KEY)
 }
 
 func (c *Config) SetEphemeral() discord.MessageFlags {

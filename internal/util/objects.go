@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
-	"time"
 
 	"github.com/disgoorg/disgo/discord"
 )
@@ -46,25 +45,26 @@ type MessageObject struct {
 	Date      discord.Timestamp `bson:"Date" json:"Date"`
 }
 
-type OllamaGenerateResponse struct {
-	Model              string    `json:"model"`
-	Created            time.Time `json:"created_at"`
-	Response           string    `json:"response"`
-	Done               bool      `json:"done"`
-	Context            []int     `json:"context"`
-	TotalDuration      int       `json:"total_duration"`
-	LoadDuration       int       `json:"load_duration"`
-	PromptEvalCount    int       `json:"prompt_eval_count"`
-	PromptEvalDuration int       `json:"prompt_eval_duration"`
-	EvalCount          int       `json:"eval_count"`
-	EvalDuration       int       `json:"eval_duration"`
+// ChatCompletionRequest is a LiteLLM (OpenAI-compatible) /chat/completions request.
+type ChatCompletionRequest struct {
+	Model    string                  `json:"model"`
+	Messages []ChatCompletionMessage `json:"messages"`
+	Stream   bool                    `json:"stream"`
 }
 
-type OllamaGenerateRequest struct {
-	Model  string                 `json:"model"`
-	Prompt string                 `json:"prompt"`
-	Format map[string]interface{} `json:"format"`
-	Stream bool                   `json:"stream"`
+type ChatCompletionMessage struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+
+type ChatCompletionResponse struct {
+	ID      string `json:"id"`
+	Model   string `json:"model"`
+	Choices []struct {
+		Index        int                   `json:"index"`
+		Message      ChatCompletionMessage `json:"message"`
+		FinishReason string                `json:"finish_reason"`
+	} `json:"choices"`
 }
 
 func GetMessageObject(object Object) (discord.Message, error) {
