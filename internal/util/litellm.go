@@ -68,11 +68,11 @@ func CreateLLMCompletion(systemPrompt, message string) (string, error) {
 	return thinkBlock.ReplaceAllString(r.Choices[0].Message.Content, ""), nil
 }
 
-// liteLLMURL returns LITELLM_URL, defaulting to http:// when no scheme is given.
+// liteLLMURL returns LITELLM_URL, defaulting to https:// when no scheme is given.
 func liteLLMURL() string {
 	url := ConfigFile.LITELLM_URL
 	if strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://") {
 		return url
 	}
-	return fmt.Sprintf("http://%s", url)
+	return fmt.Sprintf("https://%s", url)
 }
